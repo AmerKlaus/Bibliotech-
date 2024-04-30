@@ -377,9 +377,28 @@ class _BookListPageState extends State<BookListPage> {
     }
   }
 
-  // Function to reserve a book
   Future<void> reserveBook(Book book) async {
     try {
+      // Check if the user has already reserved the book
+      bool alreadyReserved = await checkIfBookReserved(book.id);
+      if (alreadyReserved) {
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: Text('Error'),
+            content: Text('You have already reserved this book.'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: Text('OK'),
+              ),
+            ],
+          ),
+        );
+        return;
+      }
+
+      // If the book is not already reserved, proceed with reservation
       await reservedBooksCollection.add({
         'userId': FirebaseAuth.instance.currentUser!.uid,
         'bookId': book.id,
@@ -396,6 +415,20 @@ class _BookListPageState extends State<BookListPage> {
     } catch (e) {
       print('Error reserving book: $e');
       // Show error message or handle error as needed
+    }
+  }
+
+  Future<bool> checkIfBookReserved(String bookId) async {
+    try {
+      // Check if the current user has already reserved the book
+      var query = await reservedBooksCollection
+          .where('userId', isEqualTo: FirebaseAuth.instance.currentUser!.uid)
+          .where('bookId', isEqualTo: bookId)
+          .get();
+      return query.docs.isNotEmpty;
+    } catch (e) {
+      print('Error checking reservation: $e');
+      return false;
     }
   }
 
