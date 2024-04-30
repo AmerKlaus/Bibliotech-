@@ -225,10 +225,11 @@ class BookListPage extends StatefulWidget {
 }
 
 class _BookListPageState extends State<BookListPage> {
-  Future<List<dynamic>> fetchBooks(String query) async {
+  Future<List<dynamic>> fetchRandomBooks() async {
     final response = await http.get(
       Uri.https('www.googleapis.com', '/books/v1/volumes', {
-        'q': query,
+        'q': 'subject:fiction',
+        'maxResults': '20',
         'key': 'AIzaSyB_Keln8dwtYVbQ9216wJxD4aqc3sXD514',
       }),
     );
@@ -241,19 +242,44 @@ class _BookListPageState extends State<BookListPage> {
   }
 
   @override
+  void initState() {
+    super.initState();
+    fetchRandomBooks(); // Fetch books when the page is initialized
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: Text('Book List'),
       ),
-      body: Center(
-        child: ElevatedButton(
-          onPressed: () async {
-            List<dynamic> books = await fetchBooks('Flutter Development');
-            print(books);  // Handle the list of books as needed
-          },
-          child: Text('Fetch Books'),
-        ),
+      body: FutureBuilder<List<dynamic>>(
+        future: fetchRandomBooks(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return Center(child: CircularProgressIndicator());
+          } else if (snapshot.hasError) {
+            return Center(child: Text('Error: ${snapshot.error}'));
+          } else {
+            List<dynamic> books = snapshot.data ?? [];
+            return ListView.builder(
+              itemCount: books.length,
+              itemBuilder: (context, index) {
+                var book = books[index];
+                return ListTile(
+                  title: Text(book['volumeInfo']['title'] ?? 'No Title'),
+                  subtitle: Text(book['volumeInfo']['authors']?.join(', ') ?? 'No Authors'),
+                  leading: book['volumeInfo']['imageLinks'] != null
+                      ? Image.network(book['volumeInfo']['imageLinks']['thumbnail'])
+                      : Icon(Icons.book),
+                  onTap: () {
+                    // Handle book tap
+                  },
+                );
+              },
+            );
+          }
+        },
       ),
     );
   }
