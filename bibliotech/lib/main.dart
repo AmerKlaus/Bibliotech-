@@ -4,6 +4,8 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/gestures.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -111,13 +113,14 @@ class _RegisterPageState extends State<RegisterPage> {
 
       // Store additional user information in Firestore
       await FirebaseFirestore.instance.collection('Users').doc(userCredential.user!.uid).set({
+        'userId': userCredential.user!.uid, // Store user ID in Firestore
         'email': _emailController.text,
       });
 
       // Navigate to home screen after successful registration
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(builder: (context) => HomeScreen()),
+        MaterialPageRoute(builder: (context) => BookListPage()),
       );
     } catch (e) {
       // Handle errors
@@ -216,16 +219,41 @@ class _RegisterPageState extends State<RegisterPage> {
   }
 }
 
+class BookListPage extends StatefulWidget {
+  @override
+  _BookListPageState createState() => _BookListPageState();
+}
 
-class HomeScreen extends StatelessWidget {
+class _BookListPageState extends State<BookListPage> {
+  Future<List<dynamic>> fetchBooks(String query) async {
+    final response = await http.get(
+      Uri.https('www.googleapis.com', '/books/v1/volumes', {
+        'q': query,
+        'key': 'AIzaSyB_Keln8dwtYVbQ9216wJxD4aqc3sXD514',
+      }),
+    );
+
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body)['items'];
+    } else {
+      throw Exception('Failed to fetch books');
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Home'),
+        title: Text('Book List'),
       ),
       body: Center(
-        child: Text('Welcome to Bibliotech!'),
+        child: ElevatedButton(
+          onPressed: () async {
+            List<dynamic> books = await fetchBooks('Flutter Development');
+            print(books);  // Handle the list of books as needed
+          },
+          child: Text('Fetch Books'),
+        ),
       ),
     );
   }
@@ -250,7 +278,7 @@ class LoginPage extends StatelessWidget {
       // Navigate to home screen after successful login
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(builder: (context) => HomeScreen()),
+        MaterialPageRoute(builder: (context) => BookListPage()),
       );
     } catch (e) {
       // Handle errors
