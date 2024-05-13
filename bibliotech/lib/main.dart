@@ -23,7 +23,7 @@ class MyApp extends StatelessWidget {
         primarySwatch: Colors.blue,
         visualDensity: VisualDensity.adaptivePlatformDensity,
       ),
-      home: MyHomePage(),
+      home: LoginPage(),
     );
   }
 }
@@ -34,12 +34,12 @@ class MyHomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends State<MyHomePage> {
-  int _currentIndex = 0;
+  int _currentIndex = 0; // Index 1 for Book List
 
   final List<Widget> _pages = [
-    LoginPage(), // Your login page
-    BookListPage(), // Your BookList page
-    LibraryPage(), // Your Library page
+    HomePage(), // Index 0 for Home
+    BookListPage(), // Index 1 for Book List
+    LibraryPage(), // Index 2 for Library
   ];
 
   void _onItemTapped(int index) {
@@ -52,7 +52,7 @@ class _MyHomePageState extends State<MyHomePage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Your App Title'),
+        title: Text('Bibliotech'),
       ),
       body: _pages[_currentIndex],
       bottomNavigationBar: MyNavigationBar(
@@ -79,8 +79,8 @@ class MyNavigationBar extends StatelessWidget {
       onTap: onItemTapped,
       items: [
         BottomNavigationBarItem(
-          icon: Icon(Icons.login),
-          label: 'Login',
+          icon: Icon(Icons.home),
+          label: 'Home Page',
         ),
         BottomNavigationBarItem(
           icon: Icon(Icons.book),
@@ -90,6 +90,72 @@ class MyNavigationBar extends StatelessWidget {
           icon: Icon(Icons.library_books),
           label: 'Library',
         ),
+      ],
+    );
+  }
+}
+
+class HomePage extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text('Home'),
+      ),
+      body: ListView(
+        padding: EdgeInsets.all(16.0),
+        children: [
+          // Latest News Section
+          Container(
+            padding: EdgeInsets.all(12.0),
+            decoration: BoxDecoration(
+              color: Colors.grey[200],
+              borderRadius: BorderRadius.circular(8.0),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Latest News',
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                ),
+                SizedBox(height: 12.0),
+                _buildNewsItem('New Library Events Announced!', 'Discover exciting upcoming events at our library, from author talks to book clubs and more. Stay tuned for dates and details!'),
+                SizedBox(height: 8.0),
+                _buildNewsItem('Library Expansion Update', "Get the latest on our library's expansion project, including new sections, enhanced facilities, and a broader collection of books and resources."),
+                SizedBox(height: 8.0),
+                _buildNewsItem('Digital Library Access Now Available!', "Access our library's digital collection from anywhere, anytime. Explore e-books, audiobooks, and digital resources to enrich your reading experience."),
+              ],
+            ),
+          ),
+          SizedBox(height: 24.0),
+          // Logout Option
+          ElevatedButton(
+            onPressed: () {
+              // Implement logout functionality here
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(builder: (context) => LoginPage()),
+              );
+            },
+            child: Text('Logout'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildNewsItem(String title, String description) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          title,
+          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+        ),
+        SizedBox(height: 4.0),
+        Text(description),
+        Divider(),
       ],
     );
   }
@@ -332,6 +398,7 @@ class _BookListPageState extends State<BookListPage> {
       FirebaseFirestore.instance.collection('ReservedBooks');
 
   Random random = Random();
+  TextEditingController searchController = TextEditingController();
 
   Future<List<Book>> fetchRandomBooks() async {
     final response = await http.get(
@@ -444,53 +511,80 @@ class _BookListPageState extends State<BookListPage> {
       appBar: AppBar(
         title: Text('Book List'),
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(8.0),
-        child: FutureBuilder<List<Book>>(
-          future: futureBooks,
-          builder: (context, snapshot) {
-            if (snapshot.connectionState == ConnectionState.waiting) {
-              return Center(child: CircularProgressIndicator());
-            } else if (snapshot.hasError) {
-              return Center(child: Text('Error: ${snapshot.error}'));
-            } else {
-              return ListView.builder(
-                itemCount: snapshot.data!.length,
-                itemBuilder: (context, index) {
-                  Book book = snapshot.data![index];
-                  return Card(
-                    margin: EdgeInsets.symmetric(vertical: 8.0),
-                    child: ListTile(
-                      leading: Image.network(book.imageURL),
-                      title: Text(book.title),
-                      subtitle: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text('Author: ${book.author}'),
-                          SizedBox(height: 4.0),
-                          Text('Price: \$${book.price.toStringAsFixed(2)}'),
-                        ],
-                      ),
-                      trailing: ElevatedButton(
-                        onPressed: () => reserveBook(book),
-                        // Call reserveBook function
-                        child: Text('Reserve'),
-                      ),
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => BookDetailsPage(book: book),
+      body: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: TextField(
+              controller: searchController,
+              decoration: InputDecoration(
+                hintText: 'Search by title or author',
+                prefixIcon: Icon(Icons.search),
+                border: OutlineInputBorder(),
+              ),
+              onChanged: (value) {
+                setState(() {
+                  // Filter books based on search query
+                  futureBooks = fetchRandomBooks()
+                      .then((books) => books.where((book) =>
+                  book.title.toLowerCase().contains(value.toLowerCase()) ||
+                      book.author.toLowerCase().contains(value.toLowerCase()))
+                      .toList());
+                });
+              },
+            ),
+          ),
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: FutureBuilder<List<Book>>(
+                future: futureBooks,
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return Center(child: CircularProgressIndicator());
+                  } else if (snapshot.hasError) {
+                    return Center(child: Text('Error: ${snapshot.error}'));
+                  } else {
+                    return ListView.builder(
+                      itemCount: snapshot.data!.length,
+                      itemBuilder: (context, index) {
+                        Book book = snapshot.data![index];
+                        return Card(
+                          margin: EdgeInsets.symmetric(vertical: 8.0),
+                          child: ListTile(
+                            leading: Image.network(book.imageURL),
+                            title: Text(book.title),
+                            subtitle: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text('Author: ${book.author}'),
+                                SizedBox(height: 4.0),
+                                Text('Price: \$${book.price.toStringAsFixed(2)}'),
+                              ],
+                            ),
+                            trailing: ElevatedButton(
+                              onPressed: () => reserveBook(book),
+                              // Call reserveBook function
+                              child: Text('Reserve'),
+                            ),
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => BookDetailsPage(book: book),
+                                ),
+                              );
+                            },
                           ),
                         );
                       },
-                    ),
-                  );
+                    );
+                  }
                 },
-              );
-            }
-          },
-        ),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -616,17 +710,38 @@ class LibraryPage extends StatelessWidget {
               );
 
               // Display the reserved book in a ListTile or a custom widget
-              return ListTile(
-                leading: Image.network(reservedBook.imageURL),
-                title: Text(reservedBook.title),
-                subtitle: Text('Author: ${reservedBook.author}'),
-                // You can add more details here if needed
+              return Card(
+                margin: EdgeInsets.symmetric(vertical: 8.0),
+                child: ListTile(
+                  leading: Image.network(reservedBook.imageURL),
+                  title: Text(reservedBook.title),
+                  subtitle: Text('Author: ${reservedBook.author}'),
+                  trailing: IconButton(
+                    icon: Icon(Icons.delete),
+                    onPressed: () => _removeReservedBook(document.id),
+                    // Call removeReservedBook function
+                  ),
+                  // You can add more details here if needed
+                ),
               );
             }).toList(),
           );
         },
       ),
     );
+  }
+
+  Future<void> _removeReservedBook(String documentId) async {
+    try {
+      await FirebaseFirestore.instance
+          .collection('ReservedBooks')
+          .doc(documentId)
+          .delete();
+      // Show success message or perform any other action
+    } catch (e) {
+      print('Error removing reserved book: $e');
+      // Show error message or handle error as needed
+    }
   }
 }
 
