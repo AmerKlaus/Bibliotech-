@@ -7,6 +7,9 @@ import 'package:flutter/gestures.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'dart:math';
+import 'dart:io';
+import 'package:intl/intl.dart';
+
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -19,10 +22,7 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Bibliotech',
-      theme: ThemeData(
-        primarySwatch: Colors.blue,
-        visualDensity: VisualDensity.adaptivePlatformDensity,
-      ),
+      theme: ThemeData.light(),
       home: MyHomePage(),
     );
   }
@@ -37,9 +37,11 @@ class _MyHomePageState extends State<MyHomePage> {
   int _currentIndex = 0;
 
   final List<Widget> _pages = [
-    LoginPage(), // Your login page
-    BookListPage(), // Your BookList page
-    LibraryPage(), // Your Library page
+    LoginPage(), // login page
+    BookListPage(), //  BookList page
+    LibraryPage(), // Library page
+    ProfilePage(), // Profile page
+    SettingsPage() // Settings page
   ];
 
   void _onItemTapped(int index) {
@@ -55,7 +57,9 @@ class _MyHomePageState extends State<MyHomePage> {
         title: Text('Your App Title'),
       ),
       body: _pages[_currentIndex],
-      bottomNavigationBar: MyNavigationBar(
+      bottomNavigationBar: _currentIndex == 0 // Check if current index is login page
+          ? null // Don't show bottom navigation bar for login page
+          : MyNavigationBar(
         currentIndex: _currentIndex,
         onItemTapped: _onItemTapped,
       ),
@@ -76,7 +80,38 @@ class MyNavigationBar extends StatelessWidget {
   Widget build(BuildContext context) {
     return BottomNavigationBar(
       currentIndex: currentIndex,
-      onTap: onItemTapped,
+      onTap: (index) {
+        if (index == 0) {
+          // Check if the login icon is selected
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => LoginPage()),
+          );
+        } else if (index == 3) {
+          // Check if the profile icon is selected
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => ProfilePage()),
+          );
+        } else if (index == 4) {
+          // Check if the settings icon is selected
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => SettingsPage()),
+          );
+        } else if (index == 5) {
+          // Check if the calendar icon (Events) is selected
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => EventPage()),
+          );
+        } else {
+          // For other items, call the provided onItemTapped callback
+          onItemTapped(index);
+        }
+      },
+      selectedIconTheme: IconThemeData(color: Colors.black),
+      unselectedIconTheme: IconThemeData(color: Colors.black),
       items: [
         BottomNavigationBarItem(
           icon: Icon(Icons.login),
@@ -84,11 +119,27 @@ class MyNavigationBar extends StatelessWidget {
         ),
         BottomNavigationBarItem(
           icon: Icon(Icons.book),
-          label: 'Book List',
+          label: '', // Transparent label for Book List
         ),
         BottomNavigationBarItem(
           icon: Icon(Icons.library_books),
           label: 'Library',
+        ),
+        BottomNavigationBarItem(
+          icon: Icon(Icons.person),
+          label: 'Profile',
+        ),
+        BottomNavigationBarItem(
+          icon: Icon(Icons.settings),
+          label: 'Settings',
+        ),
+        BottomNavigationBarItem(
+          icon: Icon(Icons.event),
+          label: 'Events',
+        ),
+        BottomNavigationBarItem(
+          icon: Icon(Icons.group),
+          label: 'Community',
         ),
       ],
     );
@@ -189,7 +240,7 @@ class _RegisterPageState extends State<RegisterPage> {
           .collection('Users')
           .doc(userCredential.user!.uid)
           .set({
-        'userId': userCredential.user!.uid, // Store user ID in Firestore
+        'userId': userCredential.user!.uid,
         'email': _emailController.text,
       });
 
@@ -329,7 +380,7 @@ class BookListPage extends StatefulWidget {
 class _BookListPageState extends State<BookListPage> {
   late Future<List<Book>> futureBooks = Future.value([]);
   final CollectionReference reservedBooksCollection =
-      FirebaseFirestore.instance.collection('ReservedBooks');
+  FirebaseFirestore.instance.collection('ReservedBooks');
 
   Random random = Random();
 
@@ -339,7 +390,6 @@ class _BookListPageState extends State<BookListPage> {
         'q': 'subject:fiction',
         'maxResults': '20',
         'key': 'AIzaSyB_Keln8dwtYVbQ9216wJxD4aqc3sXD514',
-        // Replace 'YOUR_API_KEY' with your actual API key
       }),
     );
 
@@ -358,9 +408,9 @@ class _BookListPageState extends State<BookListPage> {
           id: item['id'],
           title: volumeInfo['title'] ?? 'Unknown Title',
           author:
-              volumeInfo['authors'] != null && volumeInfo['authors'].isNotEmpty
-                  ? volumeInfo['authors'][0]
-                  : 'Unknown Author',
+          volumeInfo['authors'] != null && volumeInfo['authors'].isNotEmpty
+              ? volumeInfo['authors'][0]
+              : 'Unknown Author',
           publishedDate: volumeInfo['publishedDate'] ?? 'Unknown Date',
           publisher: volumeInfo['publisher'] ?? 'Unknown Publisher',
           description: volumeInfo['description'] ?? 'No description available',
@@ -492,143 +542,19 @@ class _BookListPageState extends State<BookListPage> {
           },
         ),
       ),
-    );
-  }
-}
-
-class BookDetailsPage extends StatelessWidget {
-  final Book book;
-
-  BookDetailsPage({required this.book});
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text('Book Details'),
-      ),
-      body: Padding(
-        padding: const EdgeInsets.all(8.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Image.network(
-              book.imageURL,
-              width: MediaQuery.of(context).size.width,
-              height: 300,
-              fit: BoxFit.cover,
-            ),
-            SizedBox(height: 16.0),
-            Text(
-              book.title,
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-            ),
-            SizedBox(height: 8.0),
-            Text('Author: ${book.author}'),
-            Text('Published Date: ${book.publishedDate}'),
-            Text('Publisher: ${book.publisher}'),
-            SizedBox(height: 16.0),
-            Text('Description:'),
-            Expanded(
-              child: SingleChildScrollView(
-                child: Text(book.description),
-              ),
-            ),
-          ],
-        ),
+      bottomNavigationBar: MyNavigationBar(
+        currentIndex: 1, // Index for BookListPage
+        onItemTapped: _onItemTapped,
       ),
     );
   }
-}
 
-class LibraryPage extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    // Get the current user ID
-    String? userId = FirebaseAuth.instance.currentUser?.uid;
-
-    if (userId == null) {
-      // User is not logged in, display a message to log in
-      return Scaffold(
-        appBar: AppBar(
-          title: Text('Library'),
-        ),
-        body: Center(
-          child: Text('Please log in to view your reserved books.'),
-        ),
-      );
-    }
-
-    return Scaffold(
-      appBar: AppBar(
-        title: Text('Library'),
-      ),
-      body: StreamBuilder(
-        stream: FirebaseFirestore.instance
-            .collection('ReservedBooks')
-            .where('userId', isEqualTo: userId)
-            .snapshots(),
-        builder: (context, AsyncSnapshot<QuerySnapshot> snapshot) {
-          if (snapshot.hasError) {
-            return Center(
-              child: Text('Error: ${snapshot.error}'),
-            );
-          }
-
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return Center(
-              child: CircularProgressIndicator(),
-            );
-          }
-
-          // If there are no reserved books
-          if (snapshot.data!.docs.isEmpty) {
-            return Center(
-              child: Text('No books reserved yet.'),
-            );
-          }
-
-          // If there are reserved books, display them in a ListView
-          return ListView(
-            children: snapshot.data!.docs.map((DocumentSnapshot document) {
-              Map<String, dynamic> data = document.data() as Map<String, dynamic>;
-
-              // Check for null values before assigning to variables
-              String id = data['id'] ?? '';
-              String title = data['title'] ?? 'Unknown Title';
-              String author = data['author'] ?? 'Unknown Author';
-              String publishedDate = data['publishedDate'] ?? 'Unknown Date';
-              String publisher = data['publisher'] ?? 'Unknown Publisher';
-              String description = data['description'] ?? 'No description available';
-              double price = (data['price'] ?? 0.0).toDouble();
-              String imageURL = data['imageURL'] ?? '';
-
-              // Create a Book object from the data
-              Book reservedBook = Book(
-                id: id,
-                title: title,
-                author: author,
-                publishedDate: publishedDate,
-                publisher: publisher,
-                description: description,
-                price: price,
-                imageURL: imageURL,
-              );
-
-              // Display the reserved book in a ListTile or a custom widget
-              return ListTile(
-                leading: Image.network(reservedBook.imageURL),
-                title: Text(reservedBook.title),
-                subtitle: Text('Author: ${reservedBook.author}'),
-                // You can add more details here if needed
-              );
-            }).toList(),
-          );
-        },
-      ),
-    );
+  void _onItemTapped(int index) {
+    setState(() {
+    });
   }
 }
+
 
 class LoginPage extends StatelessWidget {
   final TextEditingController _emailController = TextEditingController();
@@ -642,7 +568,7 @@ class LoginPage extends StatelessWidget {
   Future<void> _loginWithEmailAndPassword(BuildContext context) async {
     try {
       UserCredential userCredential =
-          await FirebaseAuth.instance.signInWithEmailAndPassword(
+      await FirebaseAuth.instance.signInWithEmailAndPassword(
         email: _emailController.text,
         password: _passwordController.text,
       );
@@ -650,7 +576,7 @@ class LoginPage extends StatelessWidget {
       // Navigate to home screen after successful login
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(builder: (context) => MyHomePage()),
+        MaterialPageRoute(builder: (context) => BookListPage()),
       );
     } catch (e) {
       // Handle errors
@@ -676,10 +602,6 @@ class LoginPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text('Login'),
-        centerTitle: true,
-      ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
@@ -763,6 +685,7 @@ class LoginPage extends StatelessWidget {
   }
 }
 
+
 class ForgotPasswordPage extends StatelessWidget {
   final TextEditingController _emailController = TextEditingController();
 
@@ -837,6 +760,597 @@ class ForgotPasswordPage extends StatelessWidget {
             ElevatedButton(
               onPressed: () => _resetPassword(context),
               child: Text('Reset Password'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+class LibraryPage extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    // Implement your LibraryPage UI here
+    return Container(
+      child: Text('Library Page'),
+    );
+  }
+}
+class BookDetailsPage extends StatelessWidget {
+  final Book book;
+
+  BookDetailsPage({required this.book});
+
+  @override
+  Widget build(BuildContext context) {
+    // Implement your BookDetailsPage UI here
+    return Container(
+      child: Text('Book Details Page for ${book.title}'),
+    );
+  }
+}
+
+class ProfilePage extends StatefulWidget {
+  @override
+  _ProfilePageState createState() => _ProfilePageState();
+}
+
+class _ProfilePageState extends State<ProfilePage> {
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text('Profile'),
+      ),
+      body: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Profile',
+              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+            ),
+            SizedBox(height: 16.0),
+            CircleAvatar(
+              radius: 50,
+              backgroundImage: AssetImage('assets/default_profile_image.png'),
+            ),
+            SizedBox(height: 16.0),
+            FutureBuilder<DocumentSnapshot>(
+              future: FirebaseFirestore.instance
+                  .collection('Users')
+                  .doc(FirebaseAuth.instance.currentUser!.uid)
+                  .get(),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return CircularProgressIndicator();
+                } else if (snapshot.hasError) {
+                  return Text('Error: ${snapshot.error}');
+                } else {
+                  var userData =
+                  snapshot.data!.data() as Map<String, dynamic>;
+                  var userEmail = userData['email'] ?? 'No email found';
+                  var userName = userData['name'] ?? 'No name found';
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Name: $userName',
+                        style: TextStyle(fontSize: 18),
+                      ),
+                      SizedBox(height: 8.0),
+                      Text(
+                        'Email: $userEmail',
+                        style: TextStyle(fontSize: 18),
+                      ),
+                    ],
+                  );
+                }
+              },
+            ),
+            SizedBox(height: 16.0),
+            Text(
+              'Account Settings',
+              style: TextStyle(fontSize: 18, color: Colors.grey),
+            ),
+            SizedBox(height: 16.0),
+            Row(
+              children: [
+                ElevatedButton(
+                  onPressed: () {
+                    // Navigate to the ForgotPasswordPage
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => ForgotPasswordPage()),
+                    );
+                  },
+                  child: Text('Change Password'),
+                ),
+                SizedBox(width: 8.0),
+                ElevatedButton(
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => EditProfilePage()),
+                    );
+                  },
+                  child: Text('Edit Profile'),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class EditProfilePage extends StatefulWidget {
+  @override
+  _EditProfilePageState createState() => _EditProfilePageState();
+}
+
+class _EditProfilePageState extends State<EditProfilePage> {
+  late TextEditingController _nameController;
+  late TextEditingController _emailController;
+
+  @override
+  void initState() {
+    super.initState();
+    // Initialize text controllers with current user information
+    _nameController = TextEditingController();
+    _emailController = TextEditingController();
+    _loadUserProfile();
+  }
+
+  @override
+  void dispose() {
+    // Dispose text controllers
+    _nameController.dispose();
+    _emailController.dispose();
+    super.dispose();
+  }
+
+  void _loadUserProfile() async {
+    // Load user profile data from Firestore and set the text controllers
+    try {
+      DocumentSnapshot userSnapshot = await FirebaseFirestore.instance
+          .collection('Users')
+          .doc(FirebaseAuth.instance.currentUser!.uid)
+          .get();
+      if (userSnapshot.exists) {
+        setState(() {
+          _nameController.text = userSnapshot['name'] ?? '';
+          _emailController.text = userSnapshot['email'] ?? '';
+        });
+      }
+    } catch (e) {
+      print('Error loading user profile: $e');
+    }
+  }
+
+  void _saveProfileChanges() async {
+    // Save the updated profile information to Firestore
+    try {
+      await FirebaseFirestore.instance
+          .collection('Users')
+          .doc(FirebaseAuth.instance.currentUser!.uid)
+          .update({
+        'name': _nameController.text,
+        'email': _emailController.text,
+      });
+      // Navigate back to the ProfilePage after saving changes
+      Navigator.pop(context); // Close the EditProfilePage
+      Navigator.pushReplacement( // Navigate back to ProfilePage, replacing the current route
+        context,
+        MaterialPageRoute(builder: (context) => ProfilePage()),
+      );
+    } catch (e) {
+      print('Error saving profile changes: $e');
+      // Show error message to the user if saving fails
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Failed to save profile changes. Please try again.'),
+        ),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text('Edit Profile'),
+      ),
+      body: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            TextField(
+              controller: _nameController,
+              decoration: InputDecoration(labelText: 'Name'),
+            ),
+            SizedBox(height: 16.0),
+            TextField(
+              controller: _emailController,
+              decoration: InputDecoration(labelText: 'Email'),
+            ),
+            SizedBox(height: 16.0),
+            ElevatedButton(
+              onPressed: _saveProfileChanges,
+              child: Text('Save Changes'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+class SettingsPage extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text('Settings'),
+      ),
+      body: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Settings',
+              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+            ),
+            SizedBox(height: 16.0),
+            GestureDetector(
+              onTap: () {
+                // Navigate to notifications settings page
+              },
+              child: Container(
+                width: double.infinity,
+                padding: EdgeInsets.all(16.0),
+                decoration: BoxDecoration(
+                  color: Colors.grey[200],
+                  borderRadius: BorderRadius.circular(10.0),
+                ),
+                child: Text(
+                  'Notifications Settings',
+                  style: TextStyle(fontSize: 18),
+                ),
+              ),
+            ),
+            SizedBox(height: 16.0),
+            GestureDetector(
+              onTap: () {
+                _showFAQ(context);
+              },
+              child: Container(
+                width: double.infinity,
+                padding: EdgeInsets.all(16.0),
+                decoration: BoxDecoration(
+                  color: Colors.grey[200],
+                  borderRadius: BorderRadius.circular(10.0),
+                ),
+                child: Text(
+                  'Help and Support',
+                  style: TextStyle(fontSize: 18),
+                ),
+              ),
+            ),
+            SizedBox(height: 16.0),
+            GestureDetector(
+              onTap: () {
+                // Logout functionality
+                FirebaseAuth.instance.signOut();
+                Navigator.pushReplacement(
+                    context,
+                    MaterialPageRoute(
+                        builder: (context) => LoginPage()));
+              },
+              child: Container(
+                width: double.infinity,
+                padding: EdgeInsets.all(16.0),
+                decoration: BoxDecoration(
+                  color: Colors.grey[200],
+                  borderRadius: BorderRadius.circular(10.0),
+                ),
+                child: Text(
+                  'Logout',
+                  style: TextStyle(fontSize: 18),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showFAQ(BuildContext context) {
+    // Show a dialog with FAQ or navigate to a FAQ page
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text("FAQ"),
+          content: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text("Q: How do I reset my password?"),
+                SizedBox(height: 8),
+                Text("A: You can reset your password by..."),
+                SizedBox(height: 16),
+                Text("Q: Can I change my username?"),
+                SizedBox(height: 8),
+                Text("A: No, currently you cannot change your username."),
+              ],
+            ),
+          ),
+          actions: <Widget>[
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+              child: Text('Close'),
+            ),
+            TextButton(
+              onPressed: () {
+                // Navigate to feedback form page
+                Navigator.of(context).pop();
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => FeedbackFormPage()),
+                );
+              },
+              child: Text('Submit Feedback'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+}
+
+class FeedbackFormPage extends StatelessWidget {
+  final TextEditingController subjectController = TextEditingController();
+  final TextEditingController messageController = TextEditingController();
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text('Feedback'),
+      ),
+      body: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Submit Feedback',
+              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+            ),
+            SizedBox(height: 16.0),
+            TextFormField(
+              controller: subjectController,
+              decoration: InputDecoration(
+                labelText: 'Subject',
+              ),
+            ),
+            SizedBox(height: 16.0),
+            TextFormField(
+              controller: messageController,
+              maxLines: 5,
+              decoration: InputDecoration(
+                labelText: 'Message',
+              ),
+            ),
+            SizedBox(height: 16.0),
+            ElevatedButton(
+              onPressed: () {
+                _submitFeedback(context);
+              },
+              child: Text('Submit'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _submitFeedback(BuildContext context) async {
+    String subject = subjectController.text.trim();
+    String message = messageController.text.trim();
+
+    if (subject.isNotEmpty && message.isNotEmpty) {
+      // Save feedback to Firestore
+      await FirebaseFirestore.instance.collection('feedback').add({
+        'subject': subject,
+        'message': message,
+        'timestamp': DateTime.now(),
+      });
+
+      // Clear text fields
+      subjectController.clear();
+      messageController.clear();
+
+      // Navigate back to Help and Support page
+      Navigator.pop(context);
+    } else {
+      // Show error message if subject or message is empty
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text('Please enter both subject and message.'),
+      ));
+    }
+  }
+}
+class EventPage extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text('Events'),
+      ),
+      body: ListView(
+        children: [
+          EventWidget(
+            event: Event(
+              name: 'Book Signing Event',
+              imageUrl: 'https://static.wikia.nocookie.net/lotr/images/8/87/Ringstrilogyposter.jpg/revision/latest/scale-to-width-down/1000?cb=20210720095933',
+              dateTime: DateTime(2024, 4, 18, 12, 30), // Friday, April 18th, 12:30 PM
+              description:
+              'During the event, attendees would have the opportunity to meet Tolkien, briefly converse with him, and have their books signed. It\'s a special occasion for fans to connect with the author, express their admiration for his work, and obtain a personalized memento in the form of a signed book.',
+              location: '4545 Pierre-de Coubertin Ave\nMontreal, QC. H1V 3N7',
+              spotsRemaining: 250,
+            ),
+          ),
+
+          // Add more EventWidget instances here for other events
+          EventWidget(
+            event: Event(
+              name: 'Book Signing Event',
+              imageUrl: 'https://cdn.mos.cms.futurecdn.net/d4RuRPLJHfAyUJiusHpZem-650-80.jpg.webp',
+              dateTime: DateTime(2024, 4, 20, 10, 30), // Friday, April 18th, 12:30 PM
+              description:
+              'During the event, fans will have the chance to meet Rob MacGregor, the acclaimed author of numerous Indiana Jones novels. They can enjoy a brief conversation with him and get their books signed. This is a unique opportunity to connect with the author, share their appreciation for his work, and leave with a special signed memento',
+              location: '4545 Pierre-de Coubertin Ave\nMontreal, QC. H1V 3N7',
+              spotsRemaining: 50,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+
+class Event {
+  final String name;
+  final String imageUrl;
+  final DateTime dateTime;
+  final String description;
+  final String location;
+  final int spotsRemaining;
+
+  Event({
+    required this.name,
+    required this.imageUrl,
+    required this.dateTime,
+    required this.description,
+    required this.location,
+    required this.spotsRemaining,
+  });
+}
+
+class EventWidget extends StatelessWidget {
+  final Event event;
+
+  EventWidget({required this.event});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.all(8.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            event.name,
+            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20),
+          ),
+          SizedBox(height: 8),
+          Image.network(
+            event.imageUrl,
+            height: 200,
+            width: double.infinity,
+            fit: BoxFit.cover,
+          ),
+          SizedBox(height: 8),
+          Text(
+            '${DateFormat('EEEE, MMMM d || hh:mm a').format(event.dateTime)}',
+          ),
+          SizedBox(height: 8),
+          Text(
+            'During the event, attendees would have the opportunity to meet Tolkien, briefly converse with him, and have their books signed. It\'s a special occasion for fans to connect with the author, express their admiration for his work, and obtain a personalized memento in the form of a signed book.',
+          ),
+          SizedBox(height: 8),
+          Container(
+            padding: EdgeInsets.all(8),
+            color: Colors.grey[200],
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Event Location:', style: TextStyle(fontWeight: FontWeight.bold)),
+                Text(event.location, style: TextStyle(color: Colors.black)), // Changed text color to black
+                SizedBox(height: 8),
+                Text('Spots Remaining: ${event.spotsRemaining}'),
+              ],
+            ),
+          ),
+          SizedBox(height: 8),
+          ElevatedButton(
+            onPressed: () {
+              if (event.spotsRemaining > 0) {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => ReservationConfirmationPage(
+                      name: '',
+                      email: '',
+                      event: event,
+                    ),
+                  ),
+                );
+              }
+            },
+            child: Text('Reserve Now'),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class ReservationConfirmationPage extends StatelessWidget {
+  final String name;
+  final String email;
+  final Event event;
+
+  ReservationConfirmationPage({required this.name, required this.email, required this.event});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text('Reservation Confirmation'),
+      ),
+      body: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.check_circle,
+              color: Colors.green,
+              size: 100,
+            ),
+            SizedBox(height: 20),
+            Text(
+              'Congratulations!',
+              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+            ),
+            SizedBox(height: 10),
+            Text('Your event ticket has been successfully reserved.'),
+            SizedBox(height: 20),
+            SizedBox(height: 20),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.pop(context);
+              },
+              child: Text('Go Home'),
             ),
           ],
         ),
