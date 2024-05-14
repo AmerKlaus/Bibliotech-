@@ -655,6 +655,18 @@ class BookDetailsPage extends StatelessWidget {
                 child: Text(book.description),
               ),
             ),
+            SizedBox(height: 20),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => ReviewListPage(book: book),
+                  ),
+                );
+              },
+              child: Text('View Reviews'),
+            ),
           ],
         ),
       ),
@@ -709,7 +721,7 @@ class LibraryPage extends StatelessWidget {
           return ListView(
             children: snapshot.data!.docs.map((DocumentSnapshot document) {
               Map<String, dynamic> data =
-              document.data() as Map<String, dynamic>;
+                  document.data() as Map<String, dynamic>;
 
               String id = data['id'] ?? '';
               String title = data['title'] ?? 'Unknown Title';
@@ -747,7 +759,8 @@ class LibraryPage extends StatelessWidget {
                       ),
                       IconButton(
                         icon: Icon(Icons.add),
-                        onPressed: () => _navigateToReviewPage(context, reservedBook),
+                        onPressed: () =>
+                            _navigateToReviewPage(context, reservedBook),
                       ),
                     ],
                   ),
@@ -796,7 +809,7 @@ class _ReviewSubmissionPageState extends State<ReviewSubmissionPage> {
     if (reviewMessage.isNotEmpty && rating > 0) {
       try {
         await FirebaseFirestore.instance.collection('Reviews').add({
-          'bookId': widget.book.id,
+          'bookName': widget.book.title,
           'userId': FirebaseAuth.instance.currentUser?.uid,
           'reviewMessage': reviewMessage,
           'rating': rating,
@@ -868,6 +881,62 @@ class _ReviewSubmissionPageState extends State<ReviewSubmissionPage> {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class ReviewListPage extends StatelessWidget {
+  final Book book;
+
+  ReviewListPage({required this.book});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text('Reviews for ${book.title}'),
+      ),
+      body: StreamBuilder(
+        stream: FirebaseFirestore.instance
+            .collection('Reviews')
+            .where('bookName', isEqualTo: book.title)
+            .snapshots(),
+        builder: (context, AsyncSnapshot<QuerySnapshot> snapshot) {
+          if (snapshot.hasError) {
+            return Center(
+              child: Text('Error: ${snapshot.error}'),
+            );
+          }
+
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return Center(
+              child: CircularProgressIndicator(),
+            );
+          }
+
+          // If there are no reviews for this book
+          if (snapshot.data!.docs.isEmpty) {
+            return Center(
+              child: Text('No reviews available for this book.'),
+            );
+          }
+
+          // If there are reviews, display them in a ListView
+          return ListView(
+            children: snapshot.data!.docs.map((DocumentSnapshot document) {
+              Map<String, dynamic> data =
+                  document.data() as Map<String, dynamic>;
+
+              // Display the review details
+              return ListTile(
+                title: Text(data['reviewMessage']),
+                subtitle: Text('Rating: ${data['rating']}'),
+                // You can add more information like user's name, etc.
+              );
+            }).toList(),
+          );
+        },
       ),
     );
   }
