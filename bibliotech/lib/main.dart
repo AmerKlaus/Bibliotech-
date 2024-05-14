@@ -58,6 +58,7 @@ class _MyHomePageState extends State<MyHomePage> {
     return Scaffold(
       appBar: AppBar(
         title: Text('Bibliotech'),
+        backgroundColor: Colors.blue,
       ),
       body: _pages[_currentIndex],
       bottomNavigationBar: MyNavigationBar(
@@ -108,6 +109,7 @@ class MyNavigationBar extends StatelessWidget {
           label: 'Events',
         ),
       ],
+      backgroundColor: Colors.blue,
     );
   }
 }
@@ -663,11 +665,9 @@ class BookDetailsPage extends StatelessWidget {
 class LibraryPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    // Get the current user ID
     String? userId = FirebaseAuth.instance.currentUser?.uid;
 
     if (userId == null) {
-      // User is not logged in, display a message to log in
       return Scaffold(
         appBar: AppBar(
           title: Text('Library'),
@@ -700,20 +700,17 @@ class LibraryPage extends StatelessWidget {
             );
           }
 
-          // If there are no reserved books
           if (snapshot.data!.docs.isEmpty) {
             return Center(
               child: Text('No books reserved yet.'),
             );
           }
 
-          // If there are reserved books, display them in a ListView
           return ListView(
             children: snapshot.data!.docs.map((DocumentSnapshot document) {
               Map<String, dynamic> data =
-                  document.data() as Map<String, dynamic>;
+              document.data() as Map<String, dynamic>;
 
-              // Check for null values before assigning to variables
               String id = data['id'] ?? '';
               String title = data['title'] ?? 'Unknown Title';
               String author = data['author'] ?? 'Unknown Author';
@@ -724,7 +721,6 @@ class LibraryPage extends StatelessWidget {
               double price = (data['price'] ?? 0.0).toDouble();
               String imageURL = data['imageURL'] ?? '';
 
-              // Create a Book object from the data
               Book reservedBook = Book(
                 id: id,
                 title: title,
@@ -736,19 +732,25 @@ class LibraryPage extends StatelessWidget {
                 imageURL: imageURL,
               );
 
-              // Display the reserved book in a ListTile or a custom widget
               return Card(
                 margin: EdgeInsets.symmetric(vertical: 8.0),
                 child: ListTile(
                   leading: Image.network(reservedBook.imageURL),
                   title: Text(reservedBook.title),
                   subtitle: Text('Author: ${reservedBook.author}'),
-                  trailing: IconButton(
-                    icon: Icon(Icons.delete),
-                    onPressed: () => _removeReservedBook(document.id),
-                    // Call removeReservedBook function
+                  trailing: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      IconButton(
+                        icon: Icon(Icons.delete),
+                        onPressed: () => _removeReservedBook(document.id),
+                      ),
+                      IconButton(
+                        icon: Icon(Icons.add),
+                        onPressed: () => _navigateToReviewPage(context, reservedBook),
+                      ),
+                    ],
                   ),
-                  // You can add more details here if needed
                 ),
               );
             }).toList(),
@@ -764,11 +766,110 @@ class LibraryPage extends StatelessWidget {
           .collection('ReservedBooks')
           .doc(documentId)
           .delete();
-      // Show success message or perform any other action
     } catch (e) {
       print('Error removing reserved book: $e');
-      // Show error message or handle error as needed
     }
+  }
+
+  void _navigateToReviewPage(BuildContext context, Book book) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => ReviewSubmissionPage(book: book)),
+    );
+  }
+}
+
+class ReviewSubmissionPage extends StatefulWidget {
+  final Book book;
+
+  ReviewSubmissionPage({required this.book});
+
+  @override
+  _ReviewSubmissionPageState createState() => _ReviewSubmissionPageState();
+}
+
+class _ReviewSubmissionPageState extends State<ReviewSubmissionPage> {
+  String reviewMessage = '';
+  int rating = 0;
+
+  void _submitReview() async {
+    if (reviewMessage.isNotEmpty && rating > 0) {
+      try {
+        await FirebaseFirestore.instance.collection('Reviews').add({
+          'bookId': widget.book.id,
+          'userId': FirebaseAuth.instance.currentUser?.uid,
+          'reviewMessage': reviewMessage,
+          'rating': rating,
+          'timestamp': FieldValue.serverTimestamp(),
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Review submitted successfully')),
+        );
+        Navigator.pop(context); // Return to previous page after submission
+      } catch (e) {
+        print('Error submitting review: $e');
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error submitting review. Please try again.')),
+        );
+      }
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Please enter a review message and rating')),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text('Submit Review'),
+      ),
+      body: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Book: ${widget.book.title}', style: TextStyle(fontSize: 18)),
+            SizedBox(height: 20),
+            Text('Your Review:', style: TextStyle(fontSize: 16)),
+            TextField(
+              decoration: InputDecoration(
+                hintText: 'Write your review here',
+                border: OutlineInputBorder(),
+              ),
+              maxLines: 5,
+              onChanged: (value) {
+                setState(() {
+                  reviewMessage = value;
+                });
+              },
+            ),
+            SizedBox(height: 20),
+            Text('Rating:', style: TextStyle(fontSize: 16)),
+            Row(
+              children: [
+                for (int i = 1; i <= 5; i++)
+                  IconButton(
+                    icon: Icon(Icons.star),
+                    onPressed: () {
+                      setState(() {
+                        rating = i;
+                      });
+                    },
+                    color: i <= rating ? Colors.yellow : Colors.grey,
+                  ),
+              ],
+            ),
+            SizedBox(height: 20),
+            ElevatedButton(
+              onPressed: _submitReview,
+              child: Text('Submit Review'),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }
 
