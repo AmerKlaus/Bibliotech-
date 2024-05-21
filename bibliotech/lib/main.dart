@@ -232,21 +232,21 @@ class HomePage extends StatelessWidget {
     );
   }
 }
-  Widget _buildNewsItem(String title, String description) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          title,
-          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-        ),
-        SizedBox(height: 4.0),
-        Text(description),
-        Divider(),
-      ],
-    );
-  }
 
+Widget _buildNewsItem(String title, String description) {
+  return Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Text(
+        title,
+        style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+      ),
+      SizedBox(height: 4.0),
+      Text(description),
+      Divider(),
+    ],
+  );
+}
 
 class RegisterPage extends StatefulWidget {
   @override
@@ -256,11 +256,13 @@ class RegisterPage extends StatefulWidget {
 class _RegisterPageState extends State<RegisterPage> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
-  final TextEditingController _confirmPasswordController = TextEditingController();
+  final TextEditingController _confirmPasswordController =
+      TextEditingController();
   bool _obscurePassword = true;
 
   bool _isStrongPassword(String password) {
-    String pattern = r'^(?=.*?[a-z])(?=.*?[A-Z])(?=.*?[0-9])(?=.*?[!@#$%^&*()_+{}|:"<>?~]).{8,}$';
+    String pattern =
+        r'^(?=.*?[a-z])(?=.*?[A-Z])(?=.*?[0-9])(?=.*?[!@#$%^&*()_+{}|:"<>?~]).{8,}$';
     RegExp regExp = RegExp(pattern);
     return regExp.hasMatch(password);
   }
@@ -325,12 +327,16 @@ class _RegisterPageState extends State<RegisterPage> {
     }
 
     try {
-      UserCredential userCredential = await FirebaseAuth.instance.createUserWithEmailAndPassword(
+      UserCredential userCredential =
+          await FirebaseAuth.instance.createUserWithEmailAndPassword(
         email: _emailController.text,
         password: _passwordController.text,
       );
 
-      await FirebaseFirestore.instance.collection('Users').doc(userCredential.user!.uid).set({
+      await FirebaseFirestore.instance
+          .collection('Users')
+          .doc(userCredential.user!.uid)
+          .set({
         'userId': userCredential.user!.uid,
         'email': _emailController.text,
       });
@@ -399,7 +405,9 @@ class _RegisterPageState extends State<RegisterPage> {
                 labelText: 'Password',
                 border: OutlineInputBorder(),
                 suffixIcon: IconButton(
-                  icon: Icon(_obscurePassword ? Icons.visibility_off : Icons.visibility),
+                  icon: Icon(_obscurePassword
+                      ? Icons.visibility_off
+                      : Icons.visibility),
                   onPressed: () {
                     setState(() {
                       _obscurePassword = !_obscurePassword;
@@ -416,7 +424,9 @@ class _RegisterPageState extends State<RegisterPage> {
                 labelText: 'Confirm Password',
                 border: OutlineInputBorder(),
                 suffixIcon: IconButton(
-                  icon: Icon(_obscurePassword ? Icons.visibility_off : Icons.visibility),
+                  icon: Icon(_obscurePassword
+                      ? Icons.visibility_off
+                      : Icons.visibility),
                   onPressed: () {
                     setState(() {
                       _obscurePassword = !_obscurePassword;
@@ -433,7 +443,8 @@ class _RegisterPageState extends State<RegisterPage> {
               style: ElevatedButton.styleFrom(
                 padding: EdgeInsets.symmetric(vertical: 16.0, horizontal: 32.0),
                 textStyle: TextStyle(fontSize: 18),
-                minimumSize: Size(double.infinity, 50), // Set width to fill parent and height to 50
+                minimumSize: Size(double.infinity,
+                    50), // Set width to fill parent and height to 50
               ),
             ),
           ],
@@ -475,7 +486,7 @@ class BookListPage extends StatefulWidget {
 class _BookListPageState extends State<BookListPage> {
   late Future<List<Book>> futureBooks = Future.value([]);
   final CollectionReference reservedBooksCollection =
-  FirebaseFirestore.instance.collection('ReservedBooks');
+      FirebaseFirestore.instance.collection('ReservedBooks');
 
   Random random = Random();
   TextEditingController searchController = TextEditingController();
@@ -504,9 +515,9 @@ class _BookListPageState extends State<BookListPage> {
           id: item['id'],
           title: volumeInfo['title'] ?? 'Unknown Title',
           author:
-          volumeInfo['authors'] != null && volumeInfo['authors'].isNotEmpty
-              ? volumeInfo['authors'][0]
-              : 'Unknown Author',
+              volumeInfo['authors'] != null && volumeInfo['authors'].isNotEmpty
+                  ? volumeInfo['authors'][0]
+                  : 'Unknown Author',
           publishedDate: volumeInfo['publishedDate'] ?? 'Unknown Date',
           publisher: volumeInfo['publisher'] ?? 'Unknown Publisher',
           description: volumeInfo['description'] ?? 'No description available',
@@ -610,12 +621,12 @@ class _BookListPageState extends State<BookListPage> {
                   // Filter books based on search query
                   futureBooks = fetchRandomBooks().then((books) => books
                       .where((book) =>
-                  book.title
-                      .toLowerCase()
-                      .contains(value.toLowerCase()) ||
-                      book.author
-                          .toLowerCase()
-                          .contains(value.toLowerCase()))
+                          book.title
+                              .toLowerCase()
+                              .contains(value.toLowerCase()) ||
+                          book.author
+                              .toLowerCase()
+                              .contains(value.toLowerCase()))
                       .toList());
                 });
               },
@@ -655,14 +666,16 @@ class _BookListPageState extends State<BookListPage> {
                               children: [
                                 Text('Author: ${book.author}'),
                                 SizedBox(height: 4.0),
-                                Text('Price: \$${book.price.toStringAsFixed(2)}'),
+                                Text(
+                                    'Price: \$${book.price.toStringAsFixed(2)}'),
                               ],
                             ),
                             trailing: ElevatedButton(
                               onPressed: () => reserveBook(book),
                               child: Text('Reserve'),
                               style: ElevatedButton.styleFrom(
-                                padding: EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                                padding: EdgeInsets.symmetric(
+                                    horizontal: 16.0, vertical: 8.0),
                                 textStyle: TextStyle(fontSize: 16),
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(8.0),
@@ -673,7 +686,8 @@ class _BookListPageState extends State<BookListPage> {
                               Navigator.push(
                                 context,
                                 MaterialPageRoute(
-                                  builder: (context) => BookDetailsPage(book: book),
+                                  builder: (context) =>
+                                      BookDetailsPage(book: book),
                                 ),
                               );
                             },
@@ -730,7 +744,8 @@ class BookDetailsPage extends StatelessWidget {
               Text('Published Date: ${book.publishedDate}'),
               Text('Publisher: ${book.publisher}'),
               SizedBox(height: 16.0),
-              Text('Description:', style: TextStyle(fontWeight: FontWeight.bold)),
+              Text('Description:',
+                  style: TextStyle(fontWeight: FontWeight.bold)),
               SizedBox(height: 8.0),
               Text(book.description),
               SizedBox(height: 20),
@@ -745,7 +760,8 @@ class BookDetailsPage extends StatelessWidget {
                 },
                 child: Text('View Reviews'),
                 style: ElevatedButton.styleFrom(
-                  padding: EdgeInsets.symmetric(horizontal: 20.0, vertical: 12.0),
+                  padding:
+                      EdgeInsets.symmetric(horizontal: 20.0, vertical: 12.0),
                   textStyle: TextStyle(fontSize: 16),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(8.0),
@@ -808,14 +824,16 @@ class LibraryPage extends StatelessWidget {
             itemCount: snapshot.data!.docs.length,
             itemBuilder: (context, index) {
               DocumentSnapshot document = snapshot.data!.docs[index];
-              Map<String, dynamic> data = document.data() as Map<String, dynamic>;
+              Map<String, dynamic> data =
+                  document.data() as Map<String, dynamic>;
 
               String id = data['id'] ?? '';
               String title = data['title'] ?? 'Unknown Title';
               String author = data['author'] ?? 'Unknown Author';
               String publishedDate = data['publishedDate'] ?? 'Unknown Date';
               String publisher = data['publisher'] ?? 'Unknown Publisher';
-              String description = data['description'] ?? 'No description available';
+              String description =
+                  data['description'] ?? 'No description available';
               double price = (data['price'] ?? 0.0).toDouble();
               String imageURL = data['imageURL'] ?? '';
               String previewLink = data['previewLink'] ?? '';
@@ -851,7 +869,8 @@ class LibraryPage extends StatelessWidget {
                       ),
                       IconButton(
                         icon: Icon(Icons.add),
-                        onPressed: () => _navigateToReviewPage(context, reservedBook),
+                        onPressed: () =>
+                            _navigateToReviewPage(context, reservedBook),
                       ),
                       IconButton(
                         icon: Icon(Icons.book),
@@ -909,23 +928,24 @@ class BookContentPage extends StatelessWidget {
       body: Center(
         child: book.previewLink.isNotEmpty
             ? ElevatedButton(
-          onPressed: () => _launchURL(book.previewLink),
+          onPressed: () async {
+            if (await canLaunchUrl(Uri.parse(book.previewLink))) {
+              await launchUrl(Uri.parse(book.previewLink));
+            } else {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('Could not launch ${book.previewLink}'),
+                ),
+              );
+            }
+          },
           child: Text('Read Book'),
         )
             : Text('No preview available for this book.'),
       ),
     );
   }
-
-  void _launchURL(String url) async {
-    if (await canLaunch(url)) {
-      await launch(url);
-    } else {
-      throw 'Could not launch $url';
-    }
-  }
 }
-
 
 class ReviewSubmissionPage extends StatefulWidget {
   final Book book;
@@ -1066,7 +1086,8 @@ class ReviewListPage extends StatelessWidget {
             itemCount: snapshot.data!.docs.length,
             itemBuilder: (context, index) {
               DocumentSnapshot document = snapshot.data!.docs[index];
-              Map<String, dynamic> data = document.data() as Map<String, dynamic>;
+              Map<String, dynamic> data =
+                  document.data() as Map<String, dynamic>;
 
               String userId = data['userId'];
               String reviewMessage = data['reviewMessage'];
@@ -1094,9 +1115,11 @@ class ReviewListPage extends StatelessWidget {
                   }
 
                   if (userSnapshot.hasData && userSnapshot.data != null) {
-                    var userData = userSnapshot.data!.data() as Map<String, dynamic>?;
+                    var userData =
+                        userSnapshot.data!.data() as Map<String, dynamic>?;
                     String userName = userData?['name'] ?? 'Unknown User';
-                    String userEmail = userData?['email'] ?? 'No email provided';
+                    String userEmail =
+                        userData?['email'] ?? 'No email provided';
 
                     return ListTile(
                       title: Text(reviewMessage),
@@ -1137,7 +1160,7 @@ class LoginPage extends StatelessWidget {
   Future<void> _loginWithEmailAndPassword(BuildContext context) async {
     try {
       UserCredential userCredential =
-      await FirebaseAuth.instance.signInWithEmailAndPassword(
+          await FirebaseAuth.instance.signInWithEmailAndPassword(
         email: _emailController.text,
         password: _passwordController.text,
       );
@@ -1286,7 +1309,7 @@ class ForgotPasswordPage extends StatelessWidget {
         builder: (context) => AlertDialog(
           title: Text('Error'),
           content:
-          Text('Failed to send password reset email. Please try again.'),
+              Text('Failed to send password reset email. Please try again.'),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
@@ -1335,7 +1358,6 @@ class ForgotPasswordPage extends StatelessWidget {
     );
   }
 }
-
 
 class ProfilePage extends StatefulWidget {
   @override
@@ -1437,7 +1459,6 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 }
-
 
 class EditProfilePage extends StatefulWidget {
   @override
@@ -1692,6 +1713,7 @@ class SettingsPage extends StatelessWidget {
     );
   }
 }
+
 class FeedbackFormPage extends StatelessWidget {
   final TextEditingController subjectController = TextEditingController();
   final TextEditingController messageController = TextEditingController();
