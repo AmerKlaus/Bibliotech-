@@ -107,6 +107,7 @@ class MyNavigationBar extends StatelessWidget {
     Color iconColor = themeProvider.isDarkMode ? Colors.white : Colors.black;
 
     return BottomNavigationBar(
+      type: BottomNavigationBarType.fixed,
       currentIndex: currentIndex,
       onTap: onItemTapped,
       items: [
@@ -436,6 +437,7 @@ class Book {
   final String description;
   final double price;
   final String imageURL;
+  final String previewLink;
 
   Book({
     required this.id,
@@ -446,6 +448,7 @@ class Book {
     required this.description,
     required this.price,
     required this.imageURL,
+    required this.previewLink,
   });
 }
 
@@ -496,6 +499,7 @@ class _BookListPageState extends State<BookListPage> {
           imageURL: volumeInfo['imageLinks'] != null
               ? volumeInfo['imageLinks']['thumbnail'] ?? ''
               : '',
+          previewLink: volumeInfo['previewLink'] ?? '',
         ));
       }
 
@@ -538,6 +542,7 @@ class _BookListPageState extends State<BookListPage> {
         'price': book.price,
         'imageURL': book.imageURL,
         'reservedAt': Timestamp.now(),
+        'previewLink': book.previewLink,
       });
       // Show success message or perform any other action
     } catch (e) {
@@ -798,6 +803,7 @@ class LibraryPage extends StatelessWidget {
               String description = data['description'] ?? 'No description available';
               double price = (data['price'] ?? 0.0).toDouble();
               String imageURL = data['imageURL'] ?? '';
+              String previewLink = data['previewLink'] ?? '';
 
               Book reservedBook = Book(
                 id: id,
@@ -808,6 +814,7 @@ class LibraryPage extends StatelessWidget {
                 description: description,
                 price: price,
                 imageURL: imageURL,
+                previewLink: previewLink,
               );
 
               return Card(
@@ -830,6 +837,11 @@ class LibraryPage extends StatelessWidget {
                       IconButton(
                         icon: Icon(Icons.add),
                         onPressed: () => _navigateToReviewPage(context, reservedBook),
+                      ),
+                      IconButton(
+                        icon: Icon(Icons.book),
+                        onPressed: () =>
+                            _navigateToBookContentPage(context, reservedBook),
                       ),
                     ],
                   ),
@@ -858,6 +870,44 @@ class LibraryPage extends StatelessWidget {
       context,
       MaterialPageRoute(builder: (context) => ReviewSubmissionPage(book: book)),
     );
+  }
+
+  void _navigateToBookContentPage(BuildContext context, Book book) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => BookContentPage(book: book)),
+    );
+  }
+}
+
+class BookContentPage extends StatelessWidget {
+  final Book book;
+
+  BookContentPage({required this.book});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(book.title),
+      ),
+      body: Center(
+        child: book.previewLink.isNotEmpty
+            ? ElevatedButton(
+          onPressed: () => _launchURL(book.previewLink),
+          child: Text('Read Book'),
+        )
+            : Text('No preview available for this book.'),
+      ),
+    );
+  }
+
+  void _launchURL(String url) async {
+    if (await canLaunch(url)) {
+      await launch(url);
+    } else {
+      throw 'Could not launch $url';
+    }
   }
 }
 
@@ -1003,11 +1053,54 @@ class ReviewListPage extends StatelessWidget {
               DocumentSnapshot document = snapshot.data!.docs[index];
               Map<String, dynamic> data = document.data() as Map<String, dynamic>;
 
-              // Display the review details
-              return ListTile(
-                title: Text(data['reviewMessage']),
-                subtitle: Text('Rating: ${data['rating']}'),
-                // You can add more information like user's name, etc.
+              String userId = data['userId'];
+              String reviewMessage = data['reviewMessage'];
+              int rating = data['rating'];
+
+              // Fetch user details from Firestore
+              return FutureBuilder<DocumentSnapshot>(
+                future: FirebaseFirestore.instance
+                    .collection('Users')
+                    .doc(userId)
+                    .get(),
+                builder: (context, userSnapshot) {
+                  if (userSnapshot.connectionState == ConnectionState.waiting) {
+                    return ListTile(
+                      title: Text(reviewMessage),
+                      subtitle: Text('Rating: $rating'),
+                    );
+                  }
+
+                  if (userSnapshot.hasError) {
+                    return ListTile(
+                      title: Text(reviewMessage),
+                      subtitle: Text('Rating: $rating'),
+                    );
+                  }
+
+                  if (userSnapshot.hasData && userSnapshot.data != null) {
+                    var userData = userSnapshot.data!.data() as Map<String, dynamic>?;
+                    String userName = userData?['name'] ?? 'Unknown User';
+                    String userEmail = userData?['email'] ?? 'No email provided';
+
+                    return ListTile(
+                      title: Text(reviewMessage),
+                      subtitle: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('Rating: $rating'),
+                          Text('By: $userName'),
+                          Text('Email: $userEmail'),
+                        ],
+                      ),
+                    );
+                  } else {
+                    return ListTile(
+                      title: Text(reviewMessage),
+                      subtitle: Text('Rating: $rating'),
+                    );
+                  }
+                },
               );
             },
           );
