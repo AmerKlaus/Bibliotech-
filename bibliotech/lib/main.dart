@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/gestures.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
@@ -10,6 +11,8 @@ import 'dart:math';
 import 'dart:io';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
+import 'package:url_launcher/url_launcher.dart';
+import 'package:image_picker/image_picker.dart';
 
 class ThemeProvider with ChangeNotifier {
   ThemeData _currentTheme = ThemeData.light();
@@ -140,8 +143,6 @@ class MyNavigationBar extends StatelessWidget {
       backgroundColor: themeProvider.isDarkMode ? Colors.grey[900] : Colors.white,
       // Set the elevation to avoid blending with the background color
       elevation: 8.0,
-      // Set the type to fix the bottom padding issue in some devices
-      type: BottomNavigationBarType.fixed,
     );
   }
 }
@@ -1320,12 +1321,62 @@ class ForgotPasswordPage extends StatelessWidget {
     );
   }
 }
+
+
 class ProfilePage extends StatefulWidget {
   @override
   _ProfilePageState createState() => _ProfilePageState();
 }
 
 class _ProfilePageState extends State<ProfilePage> {
+  File? _image;
+
+  Future<void> _pickImage() async {
+    final picker = ImagePicker();
+    final pickedFile = await picker.pickImage(source: ImageSource.gallery);
+    if (pickedFile != null) {
+      setState(() {
+        _image = File(pickedFile.path);
+      });
+    }
+  }
+
+  Future<String?> _uploadImage() async {
+    try {
+      if (_image != null) {
+        // Upload image to Firebase Storage
+        final fileName = DateTime.now().millisecondsSinceEpoch.toString();
+        final destination = 'user_profile_images/$fileName';
+        final ref = FirebaseStorage.instance.ref().child(destination);
+        await ref.putFile(_image!);
+
+        // Get download URL
+        final url = await ref.getDownloadURL();
+        return url;
+      }
+    } catch (e) {
+      print('Error uploading image: $e');
+    }
+    return null;
+  }
+
+  Future<void> _saveProfile() async {
+    try {
+      final imageUrl = await _uploadImage();
+      if (imageUrl != null) {
+        // Update user profile in Firestore
+        final uid = FirebaseAuth.instance.currentUser!.uid;
+        final userRef = FirebaseFirestore.instance.collection('Users').doc(uid);
+        await userRef.update({'profileImage': imageUrl});
+        print('Profile updated with image URL');
+      } else {
+        print('No image URL to save.');
+      }
+    } catch (e) {
+      print('Error saving profile: $e');
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -1348,6 +1399,7 @@ class _ProfilePageState extends State<ProfilePage> {
               var userData = snapshot.data!.data() as Map<String, dynamic>;
               var userEmail = userData['email'] ?? 'No email found';
               var userName = userData['name'] ?? 'No name found';
+              var profileImageUrl = userData['profileImage'] ?? null;
               return Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -1358,7 +1410,19 @@ class _ProfilePageState extends State<ProfilePage> {
                   SizedBox(height: 16.0),
                   CircleAvatar(
                     radius: 50,
-                    backgroundImage: AssetImage('assets/default_profile_image.png'),
+                    backgroundImage: _image != null
+                        ? FileImage(_image!)
+                        : profileImageUrl != null
+                        ? NetworkImage(profileImageUrl)
+                        : AssetImage('assets/default_profile_image.png') as ImageProvider<Object>,
+                  ),
+                  SizedBox(height: 16.0),
+                  ElevatedButton(
+                    onPressed: () async {
+                      await _pickImage();
+                      await _saveProfile();
+                    },
+                    child: Text('Change Image'),
                   ),
                   SizedBox(height: 16.0),
                   Text(
@@ -1415,7 +1479,6 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 }
-
 class EditProfilePage extends StatefulWidget {
   @override
   _EditProfilePageState createState() => _EditProfilePageState();
