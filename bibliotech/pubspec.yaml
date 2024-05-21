@@ -30,6 +30,7 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  material_design_icons_flutter: ^5.0.5955
   firebase_core: any
   cloud_firestore: any
   firebase_core_platform_interface: any
