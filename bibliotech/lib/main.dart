@@ -25,6 +25,21 @@ class MyApp extends StatelessWidget {
       theme: ThemeData(
         primarySwatch: Colors.blue,
         visualDensity: VisualDensity.adaptivePlatformDensity,
+        appBarTheme: AppBarTheme(
+          backgroundColor: Colors.blue,
+          titleTextStyle: TextStyle(
+            color: Colors.white,
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        bottomNavigationBarTheme: BottomNavigationBarThemeData(
+          backgroundColor: Colors.white,
+          selectedItemColor: Colors.blue,
+          unselectedItemColor: Colors.grey,
+          showSelectedLabels: true,
+          showUnselectedLabels: true,
+        ),
       ),
       home: LoginPage(),
     );
@@ -59,12 +74,37 @@ class _MyHomePageState extends State<MyHomePage> {
     return Scaffold(
       appBar: AppBar(
         title: Text('Bibliotech'),
-        backgroundColor: Colors.blue,
       ),
       body: _pages[_currentIndex],
-      bottomNavigationBar: MyNavigationBar(
+      bottomNavigationBar: BottomNavigationBar(
         currentIndex: _currentIndex,
-        onItemTapped: _onItemTapped,
+        onTap: _onItemTapped,
+        items: [
+          BottomNavigationBarItem(
+            icon: Icon(Icons.home),
+            label: 'Home',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.book),
+            label: 'Books',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.library_books),
+            label: 'Library',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.person),
+            label: 'Profile',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.settings),
+            label: 'Settings',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.event),
+            label: 'Events',
+          ),
+        ],
       ),
     );
   }
@@ -74,10 +114,7 @@ class MyNavigationBar extends StatelessWidget {
   final int currentIndex;
   final Function(int) onItemTapped;
 
-  MyNavigationBar({
-    required this.currentIndex,
-    required this.onItemTapped,
-  });
+  MyNavigationBar({required this.currentIndex, required this.onItemTapped});
 
   @override
   Widget build(BuildContext context) {
@@ -92,7 +129,7 @@ class MyNavigationBar extends StatelessWidget {
         ),
         BottomNavigationBarItem(
           icon: Icon(Icons.book),
-          label: 'Book List',
+          label: 'Books',
         ),
         BottomNavigationBarItem(
           icon: Icon(Icons.library_books),
@@ -143,14 +180,20 @@ class HomePage extends StatelessWidget {
                   style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                 ),
                 SizedBox(height: 12.0),
-                _buildNewsItem('New Library Events Announced!',
-                    'Discover exciting upcoming events at our library, from author talks to book clubs and more. Stay tuned for dates and details!'),
+                _buildNewsItem(
+                  'New Library Events Announced!',
+                  'Discover exciting upcoming events at our library, from author talks to book clubs and more. Stay tuned for dates and details!',
+                ),
                 SizedBox(height: 8.0),
-                _buildNewsItem('Library Expansion Update',
-                    "Get the latest on our library's expansion project, including new sections, enhanced facilities, and a broader collection of books and resources."),
+                _buildNewsItem(
+                  'Library Expansion Update',
+                  "Get the latest on our library's expansion project, including new sections, enhanced facilities, and a broader collection of books and resources.",
+                ),
                 SizedBox(height: 8.0),
-                _buildNewsItem('Digital Library Access Now Available!',
-                    "Access our library's digital collection from anywhere, anytime. Explore e-books, audiobooks, and digital resources to enrich your reading experience."),
+                _buildNewsItem(
+                  'Digital Library Access Now Available!',
+                  "Access our library's digital collection from anywhere, anytime. Explore e-books, audiobooks, and digital resources to enrich your reading experience.",
+                ),
               ],
             ),
           ),
@@ -158,13 +201,16 @@ class HomePage extends StatelessWidget {
           // Logout Option
           ElevatedButton(
             onPressed: () {
-              // Implement logout functionality here
               Navigator.pushReplacement(
                 context,
                 MaterialPageRoute(builder: (context) => LoginPage()),
               );
             },
             child: Text('Logout'),
+            style: ElevatedButton.styleFrom(
+              padding: EdgeInsets.symmetric(vertical: 12.0),
+              textStyle: TextStyle(fontSize: 16),
+            ),
           ),
         ],
       ),
@@ -186,6 +232,21 @@ class HomePage extends StatelessWidget {
     );
   }
 }
+  Widget _buildNewsItem(String title, String description) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          title,
+          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+        ),
+        SizedBox(height: 4.0),
+        Text(description),
+        Divider(),
+      ],
+    );
+  }
+
 
 class RegisterPage extends StatefulWidget {
   @override
@@ -195,14 +256,11 @@ class RegisterPage extends StatefulWidget {
 class _RegisterPageState extends State<RegisterPage> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
-  final TextEditingController _confirmPasswordController =
-      TextEditingController();
+  final TextEditingController _confirmPasswordController = TextEditingController();
   bool _obscurePassword = true;
 
   bool _isStrongPassword(String password) {
-    // Password must be at least 8 characters long and contain a mix of letters, numbers, and symbols
-    String pattern =
-        r'^(?=.*?[a-z])(?=.*?[A-Z])(?=.*?[0-9])(?=.*?[!@#$%^&*()_+{}|:"<>?~]).{8,}$';
+    String pattern = r'^(?=.*?[a-z])(?=.*?[A-Z])(?=.*?[0-9])(?=.*?[!@#$%^&*()_+{}|:"<>?~]).{8,}$';
     RegExp regExp = RegExp(pattern);
     return regExp.hasMatch(password);
   }
@@ -214,7 +272,6 @@ class _RegisterPageState extends State<RegisterPage> {
   }
 
   Future<void> _registerWithEmailAndPassword(BuildContext context) async {
-    // Check if passwords match
     if (_passwordController.text != _confirmPasswordController.text) {
       showDialog(
         context: context,
@@ -232,14 +289,13 @@ class _RegisterPageState extends State<RegisterPage> {
       return;
     }
 
-    // Check if password meets strength requirements
     if (!_isStrongPassword(_passwordController.text)) {
       showDialog(
         context: context,
         builder: (context) => AlertDialog(
           title: Text('Error'),
           content: Text(
-              'Password is not strong enough. It must be at least 8 characters long and contain a mix of letters, numbers, symbols, and at least one big letter.'),
+              'Password is not strong enough. It must be at least 8 characters long and contain a mix of letters, numbers, symbols, and at least one uppercase letter.'),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
@@ -251,7 +307,6 @@ class _RegisterPageState extends State<RegisterPage> {
       return;
     }
 
-    // Check if email is valid
     if (!_isValidEmail(_emailController.text)) {
       showDialog(
         context: context,
@@ -270,30 +325,22 @@ class _RegisterPageState extends State<RegisterPage> {
     }
 
     try {
-      UserCredential userCredential =
-          await FirebaseAuth.instance.createUserWithEmailAndPassword(
+      UserCredential userCredential = await FirebaseAuth.instance.createUserWithEmailAndPassword(
         email: _emailController.text,
         password: _passwordController.text,
       );
 
-      // Store additional user information in Firestore
-      await FirebaseFirestore.instance
-          .collection('Users')
-          .doc(userCredential.user!.uid)
-          .set({
+      await FirebaseFirestore.instance.collection('Users').doc(userCredential.user!.uid).set({
         'userId': userCredential.user!.uid,
         'email': _emailController.text,
       });
 
-      // Navigate to home screen after successful registration
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (context) => BookListPage()),
       );
     } catch (e) {
-      // Handle errors
       print('Failed to register: $e');
-      // Show error message to the user
       showDialog(
         context: context,
         builder: (context) => AlertDialog(
@@ -318,73 +365,78 @@ class _RegisterPageState extends State<RegisterPage> {
         centerTitle: true,
       ),
       body: SingleChildScrollView(
-        child: Padding(
-          padding: EdgeInsets.all(16.0),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Text(
-                'Bibliotech',
-                style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+        padding: EdgeInsets.all(16.0),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(
+              'Bibliotech',
+              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+            ),
+            SizedBox(height: 16.0),
+            Text(
+              'Create Account',
+              style: TextStyle(fontSize: 20),
+            ),
+            SizedBox(height: 8.0),
+            Text(
+              'Let\'s get started by filling out the form below.',
+              style: TextStyle(fontSize: 16),
+            ),
+            SizedBox(height: 16.0),
+            TextField(
+              controller: _emailController,
+              decoration: InputDecoration(
+                labelText: 'Email',
+                border: OutlineInputBorder(),
               ),
-              SizedBox(height: 16.0),
-              Text(
-                'Create Account',
-                style: TextStyle(fontSize: 20),
-              ),
-              SizedBox(height: 8.0),
-              Text(
-                'Let\'s get started by filling out the form below.',
-                style: TextStyle(fontSize: 16),
-              ),
-              SizedBox(height: 16.0),
-              TextField(
-                controller: _emailController,
-                decoration: InputDecoration(labelText: 'Email'),
-              ),
-              SizedBox(height: 16.0),
-              TextField(
-                controller: _passwordController,
-                decoration: InputDecoration(
-                  labelText: 'Password',
-                  suffixIcon: IconButton(
-                    icon: Icon(_obscurePassword
-                        ? Icons.visibility_off
-                        : Icons.visibility),
-                    onPressed: () {
-                      setState(() {
-                        _obscurePassword = !_obscurePassword;
-                      });
-                    },
-                  ),
+              keyboardType: TextInputType.emailAddress,
+            ),
+            SizedBox(height: 16.0),
+            TextField(
+              controller: _passwordController,
+              decoration: InputDecoration(
+                labelText: 'Password',
+                border: OutlineInputBorder(),
+                suffixIcon: IconButton(
+                  icon: Icon(_obscurePassword ? Icons.visibility_off : Icons.visibility),
+                  onPressed: () {
+                    setState(() {
+                      _obscurePassword = !_obscurePassword;
+                    });
+                  },
                 ),
-                obscureText: _obscurePassword,
               ),
-              SizedBox(height: 16.0),
-              TextField(
-                controller: _confirmPasswordController,
-                decoration: InputDecoration(
-                  labelText: 'Confirm Password',
-                  suffixIcon: IconButton(
-                    icon: Icon(_obscurePassword
-                        ? Icons.visibility_off
-                        : Icons.visibility),
-                    onPressed: () {
-                      setState(() {
-                        _obscurePassword = !_obscurePassword;
-                      });
-                    },
-                  ),
+              obscureText: _obscurePassword,
+            ),
+            SizedBox(height: 16.0),
+            TextField(
+              controller: _confirmPasswordController,
+              decoration: InputDecoration(
+                labelText: 'Confirm Password',
+                border: OutlineInputBorder(),
+                suffixIcon: IconButton(
+                  icon: Icon(_obscurePassword ? Icons.visibility_off : Icons.visibility),
+                  onPressed: () {
+                    setState(() {
+                      _obscurePassword = !_obscurePassword;
+                    });
+                  },
                 ),
-                obscureText: _obscurePassword,
               ),
-              SizedBox(height: 16.0),
-              ElevatedButton(
-                onPressed: () => _registerWithEmailAndPassword(context),
-                child: Text('Register'),
+              obscureText: _obscurePassword,
+            ),
+            SizedBox(height: 24.0),
+            ElevatedButton(
+              onPressed: () => _registerWithEmailAndPassword(context),
+              child: Text('Register'),
+              style: ElevatedButton.styleFrom(
+                padding: EdgeInsets.symmetric(vertical: 16.0, horizontal: 32.0),
+                textStyle: TextStyle(fontSize: 18),
+                minimumSize: Size(double.infinity, 50), // Set width to fill parent and height to 50
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
@@ -423,7 +475,7 @@ class BookListPage extends StatefulWidget {
 class _BookListPageState extends State<BookListPage> {
   late Future<List<Book>> futureBooks = Future.value([]);
   final CollectionReference reservedBooksCollection =
-      FirebaseFirestore.instance.collection('ReservedBooks');
+  FirebaseFirestore.instance.collection('ReservedBooks');
 
   Random random = Random();
   TextEditingController searchController = TextEditingController();
@@ -549,19 +601,21 @@ class _BookListPageState extends State<BookListPage> {
               decoration: InputDecoration(
                 hintText: 'Search by title or author',
                 prefixIcon: Icon(Icons.search),
-                border: OutlineInputBorder(),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8.0),
+                ),
               ),
               onChanged: (value) {
                 setState(() {
                   // Filter books based on search query
                   futureBooks = fetchRandomBooks().then((books) => books
                       .where((book) =>
-                          book.title
-                              .toLowerCase()
-                              .contains(value.toLowerCase()) ||
-                          book.author
-                              .toLowerCase()
-                              .contains(value.toLowerCase()))
+                  book.title
+                      .toLowerCase()
+                      .contains(value.toLowerCase()) ||
+                      book.author
+                          .toLowerCase()
+                          .contains(value.toLowerCase()))
                       .toList());
                 });
               },
@@ -584,29 +638,42 @@ class _BookListPageState extends State<BookListPage> {
                         Book book = snapshot.data![index];
                         return Card(
                           margin: EdgeInsets.symmetric(vertical: 8.0),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8.0),
+                          ),
+                          elevation: 4.0,
                           child: ListTile(
-                            leading: Image.network(book.imageURL),
+                            leading: Image.network(
+                              book.imageURL,
+                              width: 50,
+                              height: 50,
+                              fit: BoxFit.cover,
+                            ),
                             title: Text(book.title),
                             subtitle: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text('Author: ${book.author}'),
                                 SizedBox(height: 4.0),
-                                Text(
-                                    'Price: \$${book.price.toStringAsFixed(2)}'),
+                                Text('Price: \$${book.price.toStringAsFixed(2)}'),
                               ],
                             ),
                             trailing: ElevatedButton(
                               onPressed: () => reserveBook(book),
-                              // Call reserveBook function
                               child: Text('Reserve'),
+                              style: ElevatedButton.styleFrom(
+                                padding: EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                                textStyle: TextStyle(fontSize: 16),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(8.0),
+                                ),
+                              ),
                             ),
                             onTap: () {
                               Navigator.push(
                                 context,
                                 MaterialPageRoute(
-                                  builder: (context) =>
-                                      BookDetailsPage(book: book),
+                                  builder: (context) => BookDetailsPage(book: book),
                                 ),
                               );
                             },
@@ -636,46 +703,57 @@ class BookDetailsPage extends StatelessWidget {
       appBar: AppBar(
         title: Text('Book Details'),
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(8.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Image.network(
-              book.imageURL,
-              width: MediaQuery.of(context).size.width,
-              height: 300,
-              fit: BoxFit.cover,
-            ),
-            SizedBox(height: 16.0),
-            Text(
-              book.title,
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-            ),
-            SizedBox(height: 8.0),
-            Text('Author: ${book.author}'),
-            Text('Published Date: ${book.publishedDate}'),
-            Text('Publisher: ${book.publisher}'),
-            SizedBox(height: 16.0),
-            Text('Description:'),
-            Expanded(
-              child: SingleChildScrollView(
-                child: Text(book.description),
-              ),
-            ),
-            SizedBox(height: 20),
-            ElevatedButton(
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => ReviewListPage(book: book),
+      body: SingleChildScrollView(
+        child: Padding(
+          padding: const EdgeInsets.all(8.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              SizedBox(
+                width: MediaQuery.of(context).size.width,
+                height: 300,
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(8.0),
+                  child: Image.network(
+                    book.imageURL,
+                    fit: BoxFit.cover,
                   ),
-                );
-              },
-              child: Text('View Reviews'),
-            ),
-          ],
+                ),
+              ),
+              SizedBox(height: 16.0),
+              Text(
+                book.title,
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              ),
+              SizedBox(height: 8.0),
+              Text('Author: ${book.author}'),
+              Text('Published Date: ${book.publishedDate}'),
+              Text('Publisher: ${book.publisher}'),
+              SizedBox(height: 16.0),
+              Text('Description:', style: TextStyle(fontWeight: FontWeight.bold)),
+              SizedBox(height: 8.0),
+              Text(book.description),
+              SizedBox(height: 20),
+              ElevatedButton(
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => ReviewListPage(book: book),
+                    ),
+                  );
+                },
+                child: Text('View Reviews'),
+                style: ElevatedButton.styleFrom(
+                  padding: EdgeInsets.symmetric(horizontal: 20.0, vertical: 12.0),
+                  textStyle: TextStyle(fontSize: 16),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8.0),
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -726,18 +804,18 @@ class LibraryPage extends StatelessWidget {
             );
           }
 
-          return ListView(
-            children: snapshot.data!.docs.map((DocumentSnapshot document) {
-              Map<String, dynamic> data =
-              document.data() as Map<String, dynamic>;
+          return ListView.builder(
+            itemCount: snapshot.data!.docs.length,
+            itemBuilder: (context, index) {
+              DocumentSnapshot document = snapshot.data!.docs[index];
+              Map<String, dynamic> data = document.data() as Map<String, dynamic>;
 
               String id = data['id'] ?? '';
               String title = data['title'] ?? 'Unknown Title';
               String author = data['author'] ?? 'Unknown Author';
               String publishedDate = data['publishedDate'] ?? 'Unknown Date';
               String publisher = data['publisher'] ?? 'Unknown Publisher';
-              String description =
-                  data['description'] ?? 'No description available';
+              String description = data['description'] ?? 'No description available';
               double price = (data['price'] ?? 0.0).toDouble();
               String imageURL = data['imageURL'] ?? '';
               String previewLink = data['previewLink'] ?? '';
@@ -757,11 +835,15 @@ class LibraryPage extends StatelessWidget {
               return Card(
                 margin: EdgeInsets.symmetric(vertical: 8.0),
                 child: ListTile(
-                  leading: Image.network(reservedBook.imageURL),
+                  leading: Image.network(
+                    reservedBook.imageURL,
+                    width: 50,
+                    height: 50,
+                    fit: BoxFit.cover,
+                  ),
                   title: Text(reservedBook.title),
                   subtitle: Text('Author: ${reservedBook.author}'),
-                  trailing: Row(
-                    mainAxisSize: MainAxisSize.min,
+                  trailing: Wrap(
                     children: [
                       IconButton(
                         icon: Icon(Icons.delete),
@@ -769,8 +851,7 @@ class LibraryPage extends StatelessWidget {
                       ),
                       IconButton(
                         icon: Icon(Icons.add),
-                        onPressed: () =>
-                            _navigateToReviewPage(context, reservedBook),
+                        onPressed: () => _navigateToReviewPage(context, reservedBook),
                       ),
                       IconButton(
                         icon: Icon(Icons.book),
@@ -781,7 +862,7 @@ class LibraryPage extends StatelessWidget {
                   ),
                 ),
               );
-            }).toList(),
+            },
           );
         },
       ),
@@ -844,6 +925,7 @@ class BookContentPage extends StatelessWidget {
     }
   }
 }
+
 
 class ReviewSubmissionPage extends StatefulWidget {
   final Book book;
@@ -917,7 +999,7 @@ class _ReviewSubmissionPageState extends State<ReviewSubmissionPage> {
               children: [
                 for (int i = 1; i <= 5; i++)
                   IconButton(
-                    icon: Icon(Icons.star),
+                    icon: Icon(Icons.star, size: 30),
                     onPressed: () {
                       setState(() {
                         rating = i;
@@ -930,7 +1012,11 @@ class _ReviewSubmissionPageState extends State<ReviewSubmissionPage> {
             SizedBox(height: 20),
             ElevatedButton(
               onPressed: _submitReview,
-              child: Text('Submit Review'),
+              child: Text('Submit Review', style: TextStyle(fontSize: 18)),
+              style: ElevatedButton.styleFrom(
+                padding: EdgeInsets.symmetric(vertical: 12.0),
+                minimumSize: Size(double.infinity, 50),
+              ),
             ),
           ],
         ),
@@ -976,10 +1062,11 @@ class ReviewListPage extends StatelessWidget {
           }
 
           // If there are reviews, display them in a ListView
-          return ListView(
-            children: snapshot.data!.docs.map((DocumentSnapshot document) {
-              Map<String, dynamic> data =
-              document.data() as Map<String, dynamic>;
+          return ListView.builder(
+            itemCount: snapshot.data!.docs.length,
+            itemBuilder: (context, index) {
+              DocumentSnapshot document = snapshot.data!.docs[index];
+              Map<String, dynamic> data = document.data() as Map<String, dynamic>;
 
               String userId = data['userId'];
               String reviewMessage = data['reviewMessage'];
@@ -1030,7 +1117,7 @@ class ReviewListPage extends StatelessWidget {
                   }
                 },
               );
-            }).toList(),
+            },
           );
         },
       ),
@@ -1050,7 +1137,7 @@ class LoginPage extends StatelessWidget {
   Future<void> _loginWithEmailAndPassword(BuildContext context) async {
     try {
       UserCredential userCredential =
-          await FirebaseAuth.instance.signInWithEmailAndPassword(
+      await FirebaseAuth.instance.signInWithEmailAndPassword(
         email: _emailController.text,
         password: _passwordController.text,
       );
@@ -1094,12 +1181,12 @@ class LoginPage extends StatelessWidget {
               style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
             ),
             SizedBox(height: 16.0),
-            TextField(
+            TextFormField(
               controller: _emailController,
               decoration: InputDecoration(labelText: 'Email'),
             ),
             SizedBox(height: 16.0),
-            TextField(
+            TextFormField(
               controller: _passwordController,
               decoration: InputDecoration(labelText: 'Password'),
               obscureText: true,
@@ -1110,8 +1197,8 @@ class LoginPage extends StatelessWidget {
               child: Text('Login'),
             ),
             SizedBox(height: 16.0),
-            Text.rich(
-              TextSpan(
+            RichText(
+              text: TextSpan(
                 text: 'Don\'t have an account? ',
                 style: TextStyle(color: Colors.black),
                 children: [
@@ -1135,8 +1222,8 @@ class LoginPage extends StatelessWidget {
               ),
             ),
             SizedBox(height: 16.0),
-            Text.rich(
-              TextSpan(
+            RichText(
+              text: TextSpan(
                 text: 'Forgot your password? ',
                 style: TextStyle(color: Colors.black),
                 children: [
@@ -1199,7 +1286,7 @@ class ForgotPasswordPage extends StatelessWidget {
         builder: (context) => AlertDialog(
           title: Text('Error'),
           content:
-              Text('Failed to send password reset email. Please try again.'),
+          Text('Failed to send password reset email. Please try again.'),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
@@ -1219,7 +1306,7 @@ class ForgotPasswordPage extends StatelessWidget {
         centerTitle: true,
       ),
       body: Padding(
-        padding: EdgeInsets.all(16.0),
+        padding: const EdgeInsets.all(16.0),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
@@ -1233,7 +1320,7 @@ class ForgotPasswordPage extends StatelessWidget {
               textAlign: TextAlign.center,
             ),
             SizedBox(height: 16.0),
-            TextField(
+            TextFormField(
               controller: _emailController,
               decoration: InputDecoration(labelText: 'Email'),
             ),
@@ -1248,6 +1335,7 @@ class ForgotPasswordPage extends StatelessWidget {
     );
   }
 }
+
 
 class ProfilePage extends StatefulWidget {
   @override
@@ -1315,27 +1403,31 @@ class _ProfilePageState extends State<ProfilePage> {
             SizedBox(height: 16.0),
             Row(
               children: [
-                ElevatedButton(
-                  onPressed: () {
-                    // Navigate to the ForgotPasswordPage
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                          builder: (context) => ForgotPasswordPage()),
-                    );
-                  },
-                  child: Text('Change Password'),
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: () {
+                      // Navigate to the ForgotPasswordPage
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (context) => ForgotPasswordPage()),
+                      );
+                    },
+                    child: Text('Change Password'),
+                  ),
                 ),
                 SizedBox(width: 8.0),
-                ElevatedButton(
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                          builder: (context) => EditProfilePage()),
-                    );
-                  },
-                  child: Text('Edit Profile'),
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (context) => EditProfilePage()),
+                      );
+                    },
+                    child: Text('Edit Profile'),
+                  ),
                 ),
               ],
             ),
@@ -1345,6 +1437,7 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 }
+
 
 class EditProfilePage extends StatefulWidget {
   @override
@@ -1471,16 +1564,22 @@ class SettingsPage extends StatelessWidget {
               onTap: () {
                 // Navigate to notifications settings page
               },
-              child: Container(
-                width: double.infinity,
-                padding: EdgeInsets.all(16.0),
-                decoration: BoxDecoration(
-                  color: Colors.grey[200],
+              child: Material(
+                borderRadius: BorderRadius.circular(10.0),
+                color: Colors.grey[200],
+                child: InkWell(
                   borderRadius: BorderRadius.circular(10.0),
-                ),
-                child: Text(
-                  'Notifications Settings',
-                  style: TextStyle(fontSize: 18),
+                  onTap: () {
+                    // Navigate to notifications settings page
+                  },
+                  child: Container(
+                    width: double.infinity,
+                    padding: EdgeInsets.all(16.0),
+                    child: Text(
+                      'Notifications Settings',
+                      style: TextStyle(fontSize: 18),
+                    ),
+                  ),
                 ),
               ),
             ),
@@ -1489,16 +1588,22 @@ class SettingsPage extends StatelessWidget {
               onTap: () {
                 _showFAQ(context);
               },
-              child: Container(
-                width: double.infinity,
-                padding: EdgeInsets.all(16.0),
-                decoration: BoxDecoration(
-                  color: Colors.grey[200],
+              child: Material(
+                borderRadius: BorderRadius.circular(10.0),
+                color: Colors.grey[200],
+                child: InkWell(
                   borderRadius: BorderRadius.circular(10.0),
-                ),
-                child: Text(
-                  'Help and Support',
-                  style: TextStyle(fontSize: 18),
+                  onTap: () {
+                    _showFAQ(context);
+                  },
+                  child: Container(
+                    width: double.infinity,
+                    padding: EdgeInsets.all(16.0),
+                    child: Text(
+                      'Help and Support',
+                      style: TextStyle(fontSize: 18),
+                    ),
+                  ),
                 ),
               ),
             ),
@@ -1507,19 +1612,32 @@ class SettingsPage extends StatelessWidget {
               onTap: () {
                 // Logout functionality
                 FirebaseAuth.instance.signOut();
-                Navigator.pushReplacement(context,
-                    MaterialPageRoute(builder: (context) => LoginPage()));
+                Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(builder: (context) => LoginPage()),
+                );
               },
-              child: Container(
-                width: double.infinity,
-                padding: EdgeInsets.all(16.0),
-                decoration: BoxDecoration(
-                  color: Colors.grey[200],
+              child: Material(
+                borderRadius: BorderRadius.circular(10.0),
+                color: Colors.grey[200],
+                child: InkWell(
                   borderRadius: BorderRadius.circular(10.0),
-                ),
-                child: Text(
-                  'Logout',
-                  style: TextStyle(fontSize: 18),
+                  onTap: () {
+                    // Logout functionality
+                    FirebaseAuth.instance.signOut();
+                    Navigator.pushReplacement(
+                      context,
+                      MaterialPageRoute(builder: (context) => LoginPage()),
+                    );
+                  },
+                  child: Container(
+                    width: double.infinity,
+                    padding: EdgeInsets.all(16.0),
+                    child: Text(
+                      'Logout',
+                      style: TextStyle(fontSize: 18),
+                    ),
+                  ),
                 ),
               ),
             ),
@@ -1574,7 +1692,6 @@ class SettingsPage extends StatelessWidget {
     );
   }
 }
-
 class FeedbackFormPage extends StatelessWidget {
   final TextEditingController subjectController = TextEditingController();
   final TextEditingController messageController = TextEditingController();
@@ -1599,6 +1716,7 @@ class FeedbackFormPage extends StatelessWidget {
               controller: subjectController,
               decoration: InputDecoration(
                 labelText: 'Subject',
+                border: OutlineInputBorder(),
               ),
             ),
             SizedBox(height: 16.0),
@@ -1607,10 +1725,11 @@ class FeedbackFormPage extends StatelessWidget {
               maxLines: 5,
               decoration: InputDecoration(
                 labelText: 'Message',
+                border: OutlineInputBorder(),
               ),
             ),
             SizedBox(height: 16.0),
-            ElevatedButton(
+            OutlinedButton(
               onPressed: () {
                 _submitFeedback(context);
               },
