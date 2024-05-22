@@ -9,39 +9,50 @@ import 'dart:convert';
 import 'dart:math';
 import 'dart:io';
 import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
+
+class ThemeProvider with ChangeNotifier {
+  ThemeData _currentTheme = ThemeData.light();
+  bool _isDarkMode = false;
+
+  ThemeData getCurrentTheme() => _currentTheme;
+
+  bool get isDarkMode => _isDarkMode;
+
+  void toggleTheme() {
+    _isDarkMode = !_isDarkMode;
+    _currentTheme = _isDarkMode ? ThemeData.dark() : ThemeData.light();
+    notifyListeners();
+  }
+}
+
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp();
-  runApp(MyApp());
+  runApp(
+    ChangeNotifierProvider(
+      create: (context) => ThemeProvider(),
+      child: MyApp(),
+    ),
+  );
 }
 
 class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
+    var themeProvider = Provider.of<ThemeProvider>(context);
     return MaterialApp(
       title: 'Bibliotech',
-      theme: ThemeData(
-        primarySwatch: Colors.blue,
-        visualDensity: VisualDensity.adaptivePlatformDensity,
-        appBarTheme: AppBarTheme(
-          backgroundColor: Colors.blue,
-          titleTextStyle: TextStyle(
-            color: Colors.white,
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        bottomNavigationBarTheme: BottomNavigationBarThemeData(
-          backgroundColor: Colors.white,
-          selectedItemColor: Colors.blue,
-          unselectedItemColor: Colors.grey,
-          showSelectedLabels: true,
-          showUnselectedLabels: true,
-        ),
-      ),
+      theme: themeProvider.getCurrentTheme(),
       home: LoginPage(),
+      // Customize the icon theme
+      themeMode: themeProvider.isDarkMode ? ThemeMode.dark : ThemeMode.light,
+      darkTheme: ThemeData.dark().copyWith(
+        // Customize the icon theme for dark mode
+        iconTheme: IconThemeData(color: Colors.white),
+      ),
     );
   }
 }
@@ -76,39 +87,14 @@ class _MyHomePageState extends State<MyHomePage> {
         title: Text('Bibliotech'),
       ),
       body: _pages[_currentIndex],
-      bottomNavigationBar: BottomNavigationBar(
+      bottomNavigationBar: MyNavigationBar(
         currentIndex: _currentIndex,
-        onTap: _onItemTapped,
-        items: [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.home),
-            label: 'Home',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.book),
-            label: 'Books',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.library_books),
-            label: 'Library',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.person),
-            label: 'Profile',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.settings),
-            label: 'Settings',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.event),
-            label: 'Events',
-          ),
-        ],
+        onItemTapped: _onItemTapped,
       ),
     );
   }
 }
+
 
 class MyNavigationBar extends StatelessWidget {
   final int currentIndex;
@@ -118,39 +104,43 @@ class MyNavigationBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    var themeProvider = Provider.of<ThemeProvider>(context);
+    Color iconColor = themeProvider.isDarkMode ? Colors.white : Colors.black;
+
     return BottomNavigationBar(
       type: BottomNavigationBarType.fixed,
       currentIndex: currentIndex,
       onTap: onItemTapped,
       items: [
         BottomNavigationBarItem(
-          icon: Icon(Icons.home),
+          icon: Icon(Icons.home, color: iconColor),
           label: 'Home',
         ),
         BottomNavigationBarItem(
-          icon: Icon(Icons.book),
+          icon: Icon(Icons.book, color: iconColor),
           label: 'Books',
         ),
         BottomNavigationBarItem(
-          icon: Icon(Icons.library_books),
+          icon: Icon(Icons.library_books, color: iconColor),
           label: 'Library',
         ),
         BottomNavigationBarItem(
-          icon: Icon(Icons.person),
+          icon: Icon(Icons.person, color: iconColor),
           label: 'Profile',
         ),
         BottomNavigationBarItem(
-          icon: Icon(Icons.settings),
+          icon: Icon(Icons.settings, color: iconColor),
           label: 'Settings',
         ),
         BottomNavigationBarItem(
-          icon: Icon(Icons.event),
+          icon: Icon(Icons.event, color: iconColor),
           label: 'Events',
         ),
       ],
-      backgroundColor: Colors.blue,
-      selectedItemColor: Colors.white,
-      unselectedItemColor: Colors.grey[400],
+      // Ensure the navigation bar is visible in both light and dark modes
+      backgroundColor: themeProvider.isDarkMode ? Colors.grey[900] : Colors.white,
+      // Set the elevation to avoid blending with the background color
+      elevation: 8.0,
     );
   }
 }
@@ -158,6 +148,8 @@ class MyNavigationBar extends StatelessWidget {
 class HomePage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
+    var themeProvider = Provider.of<ThemeProvider>(context);
+
     return Scaffold(
       appBar: AppBar(
         title: Text('Home'),
@@ -169,7 +161,7 @@ class HomePage extends StatelessWidget {
           Container(
             padding: EdgeInsets.all(12.0),
             decoration: BoxDecoration(
-              color: Colors.grey[200],
+              color: themeProvider.isDarkMode ? Colors.grey[800] : Colors.grey[200],
               borderRadius: BorderRadius.circular(8.0),
             ),
             child: Column(
@@ -177,22 +169,25 @@ class HomePage extends StatelessWidget {
               children: [
                 Text(
                   'Latest News',
-                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: themeProvider.isDarkMode ? Colors.white : Colors.black),
                 ),
                 SizedBox(height: 12.0),
                 _buildNewsItem(
                   'New Library Events Announced!',
                   'Discover exciting upcoming events at our library, from author talks to book clubs and more. Stay tuned for dates and details!',
+                  themeProvider,
                 ),
                 SizedBox(height: 8.0),
                 _buildNewsItem(
                   'Library Expansion Update',
                   "Get the latest on our library's expansion project, including new sections, enhanced facilities, and a broader collection of books and resources.",
+                  themeProvider,
                 ),
                 SizedBox(height: 8.0),
                 _buildNewsItem(
                   'Digital Library Access Now Available!',
                   "Access our library's digital collection from anywhere, anytime. Explore e-books, audiobooks, and digital resources to enrich your reading experience.",
+                  themeProvider,
                 ),
               ],
             ),
@@ -206,7 +201,10 @@ class HomePage extends StatelessWidget {
                 MaterialPageRoute(builder: (context) => LoginPage()),
               );
             },
-            child: Text('Logout'),
+            child: Text(
+              'Logout',
+              style: TextStyle(color: themeProvider.isDarkMode ? Colors.white : Colors.black),
+            ),
             style: ElevatedButton.styleFrom(
               padding: EdgeInsets.symmetric(vertical: 12.0),
               textStyle: TextStyle(fontSize: 16),
@@ -217,16 +215,16 @@ class HomePage extends StatelessWidget {
     );
   }
 
-  Widget _buildNewsItem(String title, String description) {
+  Widget _buildNewsItem(String title, String description, ThemeProvider themeProvider) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           title,
-          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: themeProvider.isDarkMode ? Colors.white : Colors.black),
         ),
         SizedBox(height: 4.0),
-        Text(description),
+        Text(description, style: TextStyle(color: themeProvider.isDarkMode ? Colors.white : Colors.black)),
         Divider(),
       ],
     );
@@ -343,7 +341,7 @@ class _RegisterPageState extends State<RegisterPage> {
 
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(builder: (context) => BookListPage()),
+        MaterialPageRoute(builder: (context) => LoginPage()),
       );
     } catch (e) {
       print('Failed to register: $e');
@@ -1373,87 +1371,82 @@ class _ProfilePageState extends State<ProfilePage> {
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Profile',
-              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-            ),
-            SizedBox(height: 16.0),
-            CircleAvatar(
-              radius: 50,
-              backgroundImage: AssetImage('assets/default_profile_image.png'),
-            ),
-            SizedBox(height: 16.0),
-            FutureBuilder<DocumentSnapshot>(
-              future: FirebaseFirestore.instance
-                  .collection('Users')
-                  .doc(FirebaseAuth.instance.currentUser!.uid)
-                  .get(),
-              builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return CircularProgressIndicator();
-                } else if (snapshot.hasError) {
-                  return Text('Error: ${snapshot.error}');
-                } else {
-                  var userData = snapshot.data!.data() as Map<String, dynamic>;
-                  var userEmail = userData['email'] ?? 'No email found';
-                  var userName = userData['name'] ?? 'No name found';
-                  return Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+        child: StreamBuilder<DocumentSnapshot>(
+          stream: FirebaseFirestore.instance
+              .collection('Users')
+              .doc(FirebaseAuth.instance.currentUser!.uid)
+              .snapshots(),
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return CircularProgressIndicator();
+            } else if (snapshot.hasError) {
+              return Text('Error: ${snapshot.error}');
+            } else {
+              var userData = snapshot.data!.data() as Map<String, dynamic>;
+              var userEmail = userData['email'] ?? 'No email found';
+              var userName = userData['name'] ?? 'No name found';
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Profile',
+                    style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                  ),
+                  SizedBox(height: 16.0),
+                  CircleAvatar(
+                    radius: 50,
+                    backgroundImage: AssetImage('assets/default_profile_image.png'),
+                  ),
+                  SizedBox(height: 16.0),
+                  Text(
+                    'Name: $userName',
+                    style: TextStyle(fontSize: 18),
+                  ),
+                  SizedBox(height: 8.0),
+                  Text(
+                    'Email: $userEmail',
+                    style: TextStyle(fontSize: 18),
+                  ),
+                  SizedBox(height: 16.0),
+                  Text(
+                    'Account Settings',
+                    style: TextStyle(fontSize: 18, color: Colors.grey),
+                  ),
+                  SizedBox(height: 16.0),
+                  Row(
                     children: [
-                      Text(
-                        'Name: $userName',
-                        style: TextStyle(fontSize: 18),
+                      Expanded(
+                        child: ElevatedButton(
+                          onPressed: () {
+                            // Navigate to the ForgotPasswordPage
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                  builder: (context) => ForgotPasswordPage()),
+                            );
+                          },
+                          child: Text('Change Password'),
+                        ),
                       ),
-                      SizedBox(height: 8.0),
-                      Text(
-                        'Email: $userEmail',
-                        style: TextStyle(fontSize: 18),
+                      SizedBox(width: 8.0),
+                      Expanded(
+                        child: ElevatedButton(
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                  builder: (context) => EditProfilePage()),
+                            );
+                          },
+                          child: Text('Edit Profile'),
+                        ),
                       ),
                     ],
-                  );
-                }
-              },
-            ),
-            SizedBox(height: 16.0),
-            Text(
-              'Account Settings',
-              style: TextStyle(fontSize: 18, color: Colors.grey),
-            ),
-            SizedBox(height: 16.0),
-            Row(
-              children: [
-                Expanded(
-                  child: ElevatedButton(
-                    onPressed: () {
-                      // Navigate to the ForgotPasswordPage
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                            builder: (context) => ForgotPasswordPage()),
-                      );
-                    },
-                    child: Text('Change Password'),
                   ),
-                ),
-                SizedBox(width: 8.0),
-                Expanded(
-                  child: ElevatedButton(
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                            builder: (context) => EditProfilePage()),
-                      );
-                    },
-                    child: Text('Edit Profile'),
-                  ),
-                ),
-              ],
-            ),
-          ],
+                ],
+              );
+            }
+          },
         ),
       ),
     );
@@ -1468,6 +1461,7 @@ class EditProfilePage extends StatefulWidget {
 class _EditProfilePageState extends State<EditProfilePage> {
   late TextEditingController _nameController;
   late TextEditingController _emailController;
+  String? previousEmail;
 
   @override
   void initState() {
@@ -1496,14 +1490,14 @@ class _EditProfilePageState extends State<EditProfilePage> {
       if (userSnapshot.exists) {
         setState(() {
           _nameController.text = userSnapshot['name'] ?? '';
-          _emailController.text = userSnapshot['email'] ?? '';
+          previousEmail = userSnapshot['email'];
+          _emailController.text = previousEmail ?? '';
         });
       }
     } catch (e) {
       print('Error loading user profile: $e');
     }
   }
-
   void _saveProfileChanges() async {
     // Save the updated profile information to Firestore
     try {
@@ -1512,15 +1506,10 @@ class _EditProfilePageState extends State<EditProfilePage> {
           .doc(FirebaseAuth.instance.currentUser!.uid)
           .update({
         'name': _nameController.text,
-        'email': _emailController.text,
+        'email': _emailController.text.isEmpty ? previousEmail : _emailController.text,
       });
       // Navigate back to the ProfilePage after saving changes
       Navigator.pop(context); // Close the EditProfilePage
-      Navigator.pushReplacement(
-        // Navigate back to ProfilePage, replacing the current route
-        context,
-        MaterialPageRoute(builder: (context) => MyHomePage()),
-      );
     } catch (e) {
       print('Error saving profile changes: $e');
       // Show error message to the user if saving fails
@@ -1567,6 +1556,8 @@ class _EditProfilePageState extends State<EditProfilePage> {
 class SettingsPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
+    var themeProvider = Provider.of<ThemeProvider>(context);
+
     return Scaffold(
       appBar: AppBar(
         title: Text('Settings'),
@@ -1581,49 +1572,38 @@ class SettingsPage extends StatelessWidget {
               style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
             ),
             SizedBox(height: 16.0),
-            GestureDetector(
-              onTap: () {
-                // Navigate to notifications settings page
-              },
-              child: Material(
-                borderRadius: BorderRadius.circular(10.0),
-                color: Colors.grey[200],
-                child: InkWell(
-                  borderRadius: BorderRadius.circular(10.0),
-                  onTap: () {
-                    // Navigate to notifications settings page
-                  },
-                  child: Container(
-                    width: double.infinity,
-                    padding: EdgeInsets.all(16.0),
-                    child: Text(
-                      'Notifications Settings',
-                      style: TextStyle(fontSize: 18),
-                    ),
-                  ),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Dark Mode',
+                  style: TextStyle(fontSize: 18),
                 ),
-              ),
+                Switch(
+                  value: themeProvider.isDarkMode,
+                  onChanged: (value) {
+                    themeProvider.toggleTheme();
+                  },
+                ),
+              ],
             ),
             SizedBox(height: 16.0),
             GestureDetector(
               onTap: () {
                 _showFAQ(context);
               },
-              child: Material(
-                borderRadius: BorderRadius.circular(10.0),
-                color: Colors.grey[200],
-                child: InkWell(
+              child: Container(
+                decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(10.0),
-                  onTap: () {
-                    _showFAQ(context);
-                  },
-                  child: Container(
-                    width: double.infinity,
-                    padding: EdgeInsets.all(16.0),
-                    child: Text(
-                      'Help and Support',
-                      style: TextStyle(fontSize: 18),
-                    ),
+                  color: themeProvider.isDarkMode ? Colors.grey[800] : Colors.grey[200],
+                ),
+                width: double.infinity,
+                padding: EdgeInsets.all(16.0),
+                child: Text(
+                  'Help and Support',
+                  style: TextStyle(
+                    fontSize: 18,
+                    color: themeProvider.isDarkMode ? Colors.white : Colors.black,
                   ),
                 ),
               ),
@@ -1638,26 +1618,18 @@ class SettingsPage extends StatelessWidget {
                   MaterialPageRoute(builder: (context) => LoginPage()),
                 );
               },
-              child: Material(
-                borderRadius: BorderRadius.circular(10.0),
-                color: Colors.grey[200],
-                child: InkWell(
+              child: Container(
+                decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(10.0),
-                  onTap: () {
-                    // Logout functionality
-                    FirebaseAuth.instance.signOut();
-                    Navigator.pushReplacement(
-                      context,
-                      MaterialPageRoute(builder: (context) => LoginPage()),
-                    );
-                  },
-                  child: Container(
-                    width: double.infinity,
-                    padding: EdgeInsets.all(16.0),
-                    child: Text(
-                      'Logout',
-                      style: TextStyle(fontSize: 18),
-                    ),
+                  color: themeProvider.isDarkMode ? Colors.grey[800] : Colors.grey[200],
+                ),
+                width: double.infinity,
+                padding: EdgeInsets.all(16.0),
+                child: Text(
+                  'Logout',
+                  style: TextStyle(
+                    fontSize: 18,
+                    color: themeProvider.isDarkMode ? Colors.white : Colors.black,
                   ),
                 ),
               ),
@@ -1803,11 +1775,11 @@ class EventPage extends StatelessWidget {
             event: Event(
               name: 'Book Signing Event',
               imageUrl:
-                  'https://static.wikia.nocookie.net/lotr/images/8/87/Ringstrilogyposter.jpg/revision/latest/scale-to-width-down/1000?cb=20210720095933',
+              'https://static.wikia.nocookie.net/lotr/images/8/87/Ringstrilogyposter.jpg/revision/latest/scale-to-width-down/1000?cb=20210720095933',
               dateTime: DateTime(2024, 4, 18, 12, 30),
               // Friday, April 18th, 12:30 PM
               description:
-                  'During the event, attendees would have the opportunity to meet Tolkien, briefly converse with him, and have their books signed. It\'s a special occasion for fans to connect with the author, express their admiration for his work, and obtain a personalized memento in the form of a signed book.',
+              'During the event, attendees would have the opportunity to meet Tolkien, briefly converse with him, and have their books signed. It\'s a special occasion for fans to connect with the author, express their admiration for his work, and obtain a personalized memento in the form of a signed book.',
               location: '4545 Pierre-de Coubertin Ave\nMontreal, QC. H1V 3N7',
               spotsRemaining: 250,
             ),
@@ -1818,11 +1790,11 @@ class EventPage extends StatelessWidget {
             event: Event(
               name: 'Book Signing Event',
               imageUrl:
-                  'https://cdn.mos.cms.futurecdn.net/d4RuRPLJHfAyUJiusHpZem-650-80.jpg.webp',
+              'https://cdn.mos.cms.futurecdn.net/d4RuRPLJHfAyUJiusHpZem-650-80.jpg.webp',
               dateTime: DateTime(2024, 4, 20, 10, 30),
               // Friday, April 18th, 12:30 PM
               description:
-                  'During the event, fans will have the chance to meet Rob MacGregor, the acclaimed author of numerous Indiana Jones novels. They can enjoy a brief conversation with him and get their books signed. This is a unique opportunity to connect with the author, share their appreciation for his work, and leave with a special signed memento',
+              'During the event, fans will have the chance to meet Rob MacGregor, the acclaimed author of numerous Indiana Jones novels. They can enjoy a brief conversation with him and get their books signed. This is a unique opportunity to connect with the author, share their appreciation for his work, and leave with a special signed memento',
               location: '4545 Pierre-de Coubertin Ave\nMontreal, QC. H1V 3N7',
               spotsRemaining: 50,
             ),
@@ -1858,6 +1830,10 @@ class EventWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    var themeProvider = Provider.of<ThemeProvider>(context);
+    Color backgroundColor = themeProvider.isDarkMode ? Colors.grey[800] ?? Colors.black : Colors.grey[200] ?? Colors.white;
+    Color textColor = themeProvider.isDarkMode ? Colors.white : Colors.black;
+
     return Padding(
       padding: const EdgeInsets.all(8.0),
       child: Column(
@@ -1885,16 +1861,27 @@ class EventWidget extends StatelessWidget {
           SizedBox(height: 8),
           Container(
             padding: EdgeInsets.all(8),
-            color: Colors.grey[200],
+            decoration: BoxDecoration(
+              color: backgroundColor, // Background color based on theme mode
+              borderRadius: BorderRadius.circular(8),
+            ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Event Location:',
-                    style: TextStyle(fontWeight: FontWeight.bold)),
-                Text(event.location, style: TextStyle(color: Colors.black)),
-                // Changed text color to black
+                Text(
+                  'Event Location:',
+                  style: TextStyle(fontWeight: FontWeight.bold, color: textColor), // Text color based on theme mode
+                ),
+                SizedBox(height: 4),
+                Text(
+                  event.location ?? '', // Provide a default value in case location is null
+                  style: TextStyle(color: textColor), // Text color based on theme mode
+                ),
                 SizedBox(height: 8),
-                Text('Spots Remaining: ${event.spotsRemaining}'),
+                Text(
+                  'Spots Remaining: ${event.spotsRemaining}',
+                  style: TextStyle(color: textColor), // Text color based on theme mode
+                ),
               ],
             ),
           ),
@@ -1958,7 +1945,7 @@ class ReservationConfirmationPage extends StatelessWidget {
               onPressed: () {
                 Navigator.pop(context);
               },
-              child: Text('Go Home'),
+              child: Text('Go Back'),
             ),
           ],
         ),
