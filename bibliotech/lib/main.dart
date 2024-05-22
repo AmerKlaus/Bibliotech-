@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/gestures.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
@@ -11,6 +12,7 @@ import 'dart:io';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:image_picker/image_picker.dart';
 
 class ThemeProvider with ChangeNotifier {
   ThemeData _currentTheme = ThemeData.light();
@@ -26,7 +28,6 @@ class ThemeProvider with ChangeNotifier {
     notifyListeners();
   }
 }
-
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -44,6 +45,7 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     var themeProvider = Provider.of<ThemeProvider>(context);
     return MaterialApp(
+      debugShowCheckedModeBanner: false,
       title: 'Bibliotech',
       theme: themeProvider.getCurrentTheme(),
       home: LoginPage(),
@@ -72,6 +74,7 @@ class _MyHomePageState extends State<MyHomePage> {
     ProfilePage(), // Index 3 Profile page
     SettingsPage(), // Index 4 Settings page
     EventPage(), // Index 5 Event Page
+    CommunityPage(), // Index 6 Community Page
   ];
 
   void _onItemTapped(int index) {
@@ -94,7 +97,6 @@ class _MyHomePageState extends State<MyHomePage> {
     );
   }
 }
-
 
 class MyNavigationBar extends StatelessWidget {
   final int currentIndex;
@@ -136,9 +138,14 @@ class MyNavigationBar extends StatelessWidget {
           icon: Icon(Icons.event, color: iconColor),
           label: 'Events',
         ),
+        BottomNavigationBarItem(
+          icon: Icon(Icons.people, color: iconColor),
+          label: 'Community',
+        ),
       ],
       // Ensure the navigation bar is visible in both light and dark modes
-      backgroundColor: themeProvider.isDarkMode ? Colors.grey[900] : Colors.white,
+      backgroundColor:
+          themeProvider.isDarkMode ? Colors.grey[900] : Colors.white,
       // Set the elevation to avoid blending with the background color
       elevation: 8.0,
     );
@@ -161,7 +168,9 @@ class HomePage extends StatelessWidget {
           Container(
             padding: EdgeInsets.all(12.0),
             decoration: BoxDecoration(
-              color: themeProvider.isDarkMode ? Colors.grey[800] : Colors.grey[200],
+              color: themeProvider.isDarkMode
+                  ? Colors.grey[800]
+                  : Colors.grey[200],
               borderRadius: BorderRadius.circular(8.0),
             ),
             child: Column(
@@ -169,7 +178,12 @@ class HomePage extends StatelessWidget {
               children: [
                 Text(
                   'Latest News',
-                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: themeProvider.isDarkMode ? Colors.white : Colors.black),
+                  style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: themeProvider.isDarkMode
+                          ? Colors.white
+                          : Colors.black),
                 ),
                 SizedBox(height: 12.0),
                 _buildNewsItem(
@@ -203,7 +217,9 @@ class HomePage extends StatelessWidget {
             },
             child: Text(
               'Logout',
-              style: TextStyle(color: themeProvider.isDarkMode ? Colors.white : Colors.black),
+              style: TextStyle(
+                  color:
+                      themeProvider.isDarkMode ? Colors.white : Colors.black),
             ),
             style: ElevatedButton.styleFrom(
               padding: EdgeInsets.symmetric(vertical: 12.0),
@@ -215,16 +231,22 @@ class HomePage extends StatelessWidget {
     );
   }
 
-  Widget _buildNewsItem(String title, String description, ThemeProvider themeProvider) {
+  Widget _buildNewsItem(
+      String title, String description, ThemeProvider themeProvider) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           title,
-          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: themeProvider.isDarkMode ? Colors.white : Colors.black),
+          style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: themeProvider.isDarkMode ? Colors.white : Colors.black),
         ),
         SizedBox(height: 4.0),
-        Text(description, style: TextStyle(color: themeProvider.isDarkMode ? Colors.white : Colors.black)),
+        Text(description,
+            style: TextStyle(
+                color: themeProvider.isDarkMode ? Colors.white : Colors.black)),
         Divider(),
       ],
     );
@@ -926,19 +948,19 @@ class BookContentPage extends StatelessWidget {
       body: Center(
         child: book.previewLink.isNotEmpty
             ? ElevatedButton(
-          onPressed: () async {
-            if (await canLaunchUrl(Uri.parse(book.previewLink))) {
-              await launchUrl(Uri.parse(book.previewLink));
-            } else {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text('Could not launch ${book.previewLink}'),
-                ),
-              );
-            }
-          },
-          child: Text('Read Book'),
-        )
+                onPressed: () async {
+                  if (await canLaunchUrl(Uri.parse(book.previewLink))) {
+                    await launchUrl(Uri.parse(book.previewLink));
+                  } else {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('Could not launch ${book.previewLink}'),
+                      ),
+                    );
+                  }
+                },
+                child: Text('Read Book'),
+              )
             : Text('No preview available for this book.'),
       ),
     );
@@ -1142,6 +1164,610 @@ class ReviewListPage extends StatelessWidget {
           );
         },
       ),
+    );
+  }
+}
+
+class CommunityPage extends StatefulWidget {
+  @override
+  _CommunityPageState createState() => _CommunityPageState();
+}
+
+class _CommunityPageState extends State<CommunityPage> {
+  final TextEditingController _searchController = TextEditingController();
+  final TextEditingController _titleController = TextEditingController();
+  final TextEditingController _contentController = TextEditingController();
+  String? name = "";
+
+  void _addDiscussion() async {
+    if (_titleController.text.isNotEmpty &&
+        _contentController.text.isNotEmpty) {
+      final userId = FirebaseAuth.instance.currentUser?.uid;
+      DocumentSnapshot userSnapshot = await FirebaseFirestore.instance
+          .collection('Users')
+          .doc(userId)
+          .get();
+
+      if (userSnapshot.exists) {
+        Map<String, dynamic>? userData =
+            userSnapshot.data() as Map<String, dynamic>?;
+        if (userData != null) {
+          name = userData['name'];
+          // Use name variable here
+        } else {
+          // Handle the case where userData is null
+        }
+        await FirebaseFirestore.instance.collection('Discussions').add({
+          'title': _titleController.text,
+          'content': _contentController.text,
+          'userId': userId,
+          'name': name ?? 'Anonymous',
+          'timestamp': FieldValue.serverTimestamp(),
+          'likes': 0,
+          'comments': 0,
+        });
+        _titleController.clear();
+        _contentController.clear();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Discussion added successfully')),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('User not found')),
+        );
+      }
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Please enter both title and content')),
+      );
+    }
+  }
+
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text('Community'),
+      ),
+      body: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          children: [
+            TextField(
+              controller: _searchController,
+              decoration: InputDecoration(
+                labelText: 'Search for books, discussions, users...',
+                border: OutlineInputBorder(),
+              ),
+            ),
+            SizedBox(height: 10),
+            Row(
+              children: [
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: () {
+                      showDialog(
+                        context: context,
+                        builder: (BuildContext context) {
+                          return AlertDialog(
+                            title: Text('New Discussion'),
+                            content: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                TextField(
+                                  controller: _titleController,
+                                  decoration:
+                                      InputDecoration(labelText: 'Title'),
+                                ),
+                                TextField(
+                                  controller: _contentController,
+                                  decoration:
+                                      InputDecoration(labelText: 'Content'),
+                                  maxLines: 3,
+                                ),
+                              ],
+                            ),
+                            actions: [
+                              TextButton(
+                                onPressed: () {
+                                  Navigator.of(context).pop();
+                                },
+                                child: Text('Cancel'),
+                              ),
+                              ElevatedButton(
+                                onPressed: () {
+                                  _addDiscussion();
+                                  Navigator.of(context).pop();
+                                },
+                                child: Text('Add'),
+                              ),
+                            ],
+                          );
+                        },
+                      );
+                    },
+                    child: Text('New Discussion'),
+                  ),
+                ),
+                SizedBox(width: 10),
+              ],
+            ),
+            SizedBox(height: 10),
+            Expanded(
+              child: StreamBuilder(
+                stream: FirebaseFirestore.instance
+                    .collection('Discussions')
+                    .orderBy('timestamp', descending: true)
+                    .snapshots(),
+                builder: (context, AsyncSnapshot<QuerySnapshot> snapshot) {
+                  if (snapshot.hasError) {
+                    return Center(child: Text('Error: ${snapshot.error}'));
+                  }
+
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return Center(child: CircularProgressIndicator());
+                  }
+
+                  return ListView(
+                    children:
+                        snapshot.data!.docs.map((DocumentSnapshot document) {
+                      Map<String, dynamic> data =
+                          document.data() as Map<String, dynamic>;
+                      return DiscussionTile(
+                        discussionId: document.id,
+                        userName: data['name'] ?? 'Anonymous',
+                        title: data['title'],
+                        content: data['content'],
+                        likes: data['likes'] ?? 0,
+                        comments: data['comments'] ?? 0,
+                      );
+                    }).toList(),
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class DiscussionTile extends StatelessWidget {
+  final String discussionId;
+  final String userName;
+  final String title;
+  final String content;
+  final int likes;
+  final int comments;
+
+  DiscussionTile({
+    required this.discussionId,
+    required this.userName,
+    required this.title,
+    required this.content,
+    required this.likes,
+    required this.comments,
+  });
+
+  void _likeDiscussion() async {
+    DocumentReference discussionRef =
+        FirebaseFirestore.instance.collection('Discussions').doc(discussionId);
+    FirebaseFirestore.instance.runTransaction((transaction) async {
+      DocumentSnapshot snapshot = await transaction.get(discussionRef);
+      if (snapshot.exists) {
+        int newLikes = (snapshot.data() as Map<String, dynamic>)['likes'] + 1;
+        transaction.update(discussionRef, {'likes': newLikes});
+      }
+    });
+  }
+
+  void _addComment(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        final TextEditingController _commentController =
+            TextEditingController();
+        return AlertDialog(
+          title: Text('Add Comment'),
+          content: TextField(
+            controller: _commentController,
+            decoration: InputDecoration(labelText: 'Comment'),
+            maxLines: 3,
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+              child: Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                if (_commentController.text.isNotEmpty) {
+                  final userId = FirebaseAuth.instance.currentUser?.uid;
+                  DocumentSnapshot userSnapshot = await FirebaseFirestore
+                      .instance
+                      .collection('Users')
+                      .doc(userId)
+                      .get();
+
+                  if (userSnapshot.exists) {
+                    Map<String, dynamic>? userData =
+                        userSnapshot.data() as Map<String, dynamic>?;
+                    String? name;
+                    if (userData != null) {
+                      name = userData['name'];
+                      // Use name variable here
+                    } else {
+                      // Handle the case where userData is null
+                    }
+
+                    DocumentReference discussionRef = FirebaseFirestore.instance
+                        .collection('Discussions')
+                        .doc(discussionId);
+                    DocumentReference commentRef = await FirebaseFirestore
+                        .instance
+                        .collection('Discussions')
+                        .doc(discussionId)
+                        .collection('Comments')
+                        .add({
+                      'userId': FirebaseAuth.instance.currentUser?.uid,
+                      'name': name ?? 'Anonymous',
+                      'comment': _commentController.text,
+                      'timestamp': FieldValue.serverTimestamp(),
+                      'likes': 0,
+                      'replies': 0,
+                    });
+
+                    FirebaseFirestore.instance
+                        .runTransaction((transaction) async {
+                      DocumentSnapshot snapshot =
+                          await transaction.get(discussionRef);
+                      if (snapshot.exists) {
+                        int newComments = (snapshot.data()
+                                as Map<String, dynamic>)['comments'] +
+                            1;
+                        transaction
+                            .update(discussionRef, {'comments': newComments});
+                      }
+                    });
+                  } else {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('User not found')),
+                    );
+                  }
+                  Navigator.of(context).pop();
+                } else {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Please enter a comment')),
+                  );
+                }
+              },
+              child: Text('Add'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      margin: const EdgeInsets.symmetric(vertical: 8),
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(title,
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            SizedBox(height: 8),
+            Text(content),
+            SizedBox(height: 8),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Row(
+                  children: [
+                    IconButton(
+                      icon: Icon(Icons.thumb_up),
+                      onPressed: _likeDiscussion,
+                    ),
+                    Text('$likes Likes'),
+                  ],
+                ),
+                Row(
+                  children: [
+                    IconButton(
+                      icon: Icon(Icons.comment),
+                      onPressed: () => _addComment(context),
+                    ),
+                    Text('$comments Comments'),
+                  ],
+                ),
+              ],
+            ),
+            CommentSection(discussionId: discussionId),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class CommentSection extends StatelessWidget {
+  final String discussionId;
+
+  CommentSection({required this.discussionId});
+
+  @override
+  Widget build(BuildContext context) {
+    return StreamBuilder(
+      stream: FirebaseFirestore.instance
+          .collection('Discussions')
+          .doc(discussionId)
+          .collection('Comments')
+          .orderBy('timestamp', descending: true)
+          .snapshots(),
+      builder: (context, AsyncSnapshot<QuerySnapshot> snapshot) {
+        if (snapshot.hasError) {
+          return Center(child: Text('Error: ${snapshot.error}'));
+        }
+
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return Center(child: CircularProgressIndicator());
+        }
+
+        return Column(
+          children: snapshot.data!.docs.map((DocumentSnapshot document) {
+            Map<String, dynamic> data = document.data() as Map<String, dynamic>;
+            return CommentTile(
+              commentId: document.id,
+              discussionId: discussionId,
+              userName: data['name'] ?? 'Anonymous',
+              comment: data['comment'],
+              likes: data['likes'] ?? 0,
+              replies: data['replies'] ?? 0,
+            );
+          }).toList(),
+        );
+      },
+    );
+  }
+}
+
+class CommentTile extends StatelessWidget {
+  final String commentId;
+  final String discussionId;
+  final String userName;
+  final String comment;
+  final int likes;
+  final int replies;
+
+  CommentTile({
+    required this.commentId,
+    required this.discussionId,
+    required this.userName,
+    required this.comment,
+    required this.likes,
+    required this.replies,
+  });
+
+  void _likeComment() async {
+    DocumentReference commentRef = FirebaseFirestore.instance
+        .collection('Discussions')
+        .doc(discussionId)
+        .collection('Comments')
+        .doc(commentId);
+    FirebaseFirestore.instance.runTransaction((transaction) async {
+      DocumentSnapshot snapshot = await transaction.get(commentRef);
+      if (snapshot.exists) {
+        int newLikes = (snapshot.data() as Map<String, dynamic>)['likes'] + 1;
+        transaction.update(commentRef, {'likes': newLikes});
+      }
+    });
+  }
+
+  void _replyToComment(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        final TextEditingController _replyController = TextEditingController();
+        return AlertDialog(
+          title: Text('Reply to Comment'),
+          content: TextField(
+            controller: _replyController,
+            decoration: InputDecoration(labelText: 'Reply'),
+            maxLines: 3,
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+              child: Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                if (_replyController.text.isNotEmpty) {
+                  final userId = FirebaseAuth.instance.currentUser?.uid;
+                  DocumentSnapshot userSnapshot = await FirebaseFirestore
+                      .instance
+                      .collection('Users')
+                      .doc(userId)
+                      .get();
+
+                  if (userSnapshot.exists) {
+                    Map<String, dynamic>? userData =
+                        userSnapshot.data() as Map<String, dynamic>?;
+                    String? name;
+                    if (userData != null) {
+                      name = userData['name'];
+                      // Use name variable here
+                    } else {
+                      // Handle the case where userData is null
+                    }
+                    DocumentReference commentRef = FirebaseFirestore.instance
+                        .collection('Discussions')
+                        .doc(discussionId)
+                        .collection('Comments')
+                        .doc(commentId);
+                    await FirebaseFirestore.instance
+                        .collection('Discussions')
+                        .doc(discussionId)
+                        .collection('Comments')
+                        .doc(commentId)
+                        .collection('Replies')
+                        .add({
+                      'userId': FirebaseAuth.instance.currentUser?.uid,
+                      'name': name ?? 'Anonymous',
+                      'reply': _replyController.text,
+                      'timestamp': FieldValue.serverTimestamp(),
+                      'likes': 0,
+                    });
+                    FirebaseFirestore.instance
+                        .runTransaction((transaction) async {
+                      DocumentSnapshot snapshot =
+                          await transaction.get(commentRef);
+                      if (snapshot.exists) {
+                        int newReplies = (snapshot.data()
+                                as Map<String, dynamic>)['replies'] +
+                            1;
+                        transaction.update(commentRef, {'replies': newReplies});
+                      }
+                    });
+                  } else {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('User not found')),
+                    );
+                  }
+                  Navigator.of(context).pop();
+                } else {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Please enter a reply')),
+                  );
+                }
+              },
+              child: Text('Reply'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      margin: const EdgeInsets.symmetric(vertical: 4),
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(userName, style: TextStyle(fontWeight: FontWeight.bold)),
+            SizedBox(height: 4),
+            Text(comment),
+            SizedBox(height: 8),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Row(
+                  children: [
+                    IconButton(
+                      icon: Icon(Icons.thumb_up),
+                      onPressed: _likeComment,
+                    ),
+                    Text('$likes Likes'),
+                  ],
+                ),
+                Row(
+                  children: [
+                    IconButton(
+                      icon: Icon(Icons.reply),
+                      onPressed: () => _replyToComment(context),
+                    ),
+                    Text('$replies Replies'),
+                  ],
+                ),
+              ],
+            ),
+            ReplySection(discussionId: discussionId, commentId: commentId),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class ReplySection extends StatelessWidget {
+  final String discussionId;
+  final String commentId;
+
+  ReplySection({required this.discussionId, required this.commentId});
+
+  @override
+  Widget build(BuildContext context) {
+    return StreamBuilder(
+      stream: FirebaseFirestore.instance
+          .collection('Discussions')
+          .doc(discussionId)
+          .collection('Comments')
+          .doc(commentId)
+          .collection('Replies')
+          .orderBy('timestamp', descending: true)
+          .snapshots(),
+      builder: (context, AsyncSnapshot<QuerySnapshot> snapshot) {
+        if (snapshot.hasError) {
+          return Center(child: Text('Error: ${snapshot.error}'));
+        }
+
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return Center(child: CircularProgressIndicator());
+        }
+
+        return Column(
+          children: snapshot.data!.docs.map((DocumentSnapshot document) {
+            Map<String, dynamic> data = document.data() as Map<String, dynamic>;
+            return ListTile(
+              title: Text(data['name'] ?? 'Anonymous'),
+              subtitle: Text(data['reply']),
+              trailing: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  IconButton(
+                    icon: Icon(Icons.thumb_up),
+                    onPressed: () {
+                      DocumentReference replyRef = FirebaseFirestore.instance
+                          .collection('Discussions')
+                          .doc(discussionId)
+                          .collection('Comments')
+                          .doc(commentId)
+                          .collection('Replies')
+                          .doc(document.id);
+                      FirebaseFirestore.instance
+                          .runTransaction((transaction) async {
+                        DocumentSnapshot snapshot =
+                            await transaction.get(replyRef);
+                        if (snapshot.exists) {
+                          int newLikes = (snapshot.data()
+                                  as Map<String, dynamic>)['likes'] +
+                              1;
+                          transaction.update(replyRef, {'likes': newLikes});
+                        }
+                      });
+                    },
+                  ),
+                  Text('${data['likes'] ?? 0}'),
+                ],
+              ),
+            );
+          }).toList(),
+        );
+      },
     );
   }
 }
@@ -1363,11 +1989,62 @@ class ProfilePage extends StatefulWidget {
 }
 
 class _ProfilePageState extends State<ProfilePage> {
+  File? _image;
+
+  Future<void> _pickImage() async {
+    final picker = ImagePicker();
+    final pickedFile = await picker.pickImage(source: ImageSource.gallery);
+    if (pickedFile != null) {
+      setState(() {
+        _image = File(pickedFile.path);
+      });
+    }
+  }
+
+  Future<String?> _uploadImage() async {
+    try {
+      if (_image != null) {
+        // Upload image to Firebase Storage
+        final fileName = DateTime.now().millisecondsSinceEpoch.toString();
+        final destination = 'user_profile_images/$fileName';
+        final ref = FirebaseStorage.instance.ref().child(destination);
+        await ref.putFile(_image!);
+
+        // Get download URL
+        final url = await ref.getDownloadURL();
+        return url;
+      }
+    } catch (e) {
+      print('Error uploading image: $e');
+    }
+    return null;
+  }
+
+  Future<void> _saveProfile() async {
+    try {
+      final imageUrl = await _uploadImage();
+      if (imageUrl != null) {
+        // Update user profile in Firestore
+        final uid = FirebaseAuth.instance.currentUser!.uid;
+        final userRef = FirebaseFirestore.instance.collection('Users').doc(uid);
+        await userRef.update({'profileImage': imageUrl});
+        print('Profile updated with image URL');
+      } else {
+        print('No image URL to save.');
+      }
+    } catch (e) {
+      print('Error saving profile: $e');
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Profile'),
+        title: Text(
+          'Profile',
+          style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
+        ),
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
@@ -1385,17 +2062,27 @@ class _ProfilePageState extends State<ProfilePage> {
               var userData = snapshot.data!.data() as Map<String, dynamic>;
               var userEmail = userData['email'] ?? 'No email found';
               var userName = userData['name'] ?? 'No name found';
+              var profileImageUrl = userData['profileImage'] ?? null;
               return Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    'Profile',
-                    style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-                  ),
-                  SizedBox(height: 16.0),
+                  SizedBox(height: 0.0),
                   CircleAvatar(
                     radius: 50,
-                    backgroundImage: AssetImage('assets/default_profile_image.png'),
+                    backgroundImage: _image != null
+                        ? FileImage(_image!)
+                        : profileImageUrl != null
+                            ? NetworkImage(profileImageUrl)
+                            : AssetImage('assets/default_profile_image.png')
+                                as ImageProvider<Object>,
+                  ),
+                  SizedBox(height: 16.0),
+                  ElevatedButton(
+                    onPressed: () async {
+                      await _pickImage();
+                      await _saveProfile();
+                    },
+                    child: Text('Change Image'),
                   ),
                   SizedBox(height: 16.0),
                   Text(
@@ -1498,6 +2185,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
       print('Error loading user profile: $e');
     }
   }
+
   void _saveProfileChanges() async {
     // Save the updated profile information to Firestore
     try {
@@ -1506,7 +2194,9 @@ class _EditProfilePageState extends State<EditProfilePage> {
           .doc(FirebaseAuth.instance.currentUser!.uid)
           .update({
         'name': _nameController.text,
-        'email': _emailController.text.isEmpty ? previousEmail : _emailController.text,
+        'email': _emailController.text.isEmpty
+            ? previousEmail
+            : _emailController.text,
       });
       // Navigate back to the ProfilePage after saving changes
       Navigator.pop(context); // Close the EditProfilePage
@@ -1560,18 +2250,17 @@ class SettingsPage extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text('Settings'),
+        title: Text(
+          'Settings',
+          style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+        ),
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              'Settings',
-              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-            ),
-            SizedBox(height: 16.0),
+            SizedBox(height: 1.0),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -1595,7 +2284,9 @@ class SettingsPage extends StatelessWidget {
               child: Container(
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(10.0),
-                  color: themeProvider.isDarkMode ? Colors.grey[800] : Colors.grey[200],
+                  color: themeProvider.isDarkMode
+                      ? Colors.grey[800]
+                      : Colors.grey[200],
                 ),
                 width: double.infinity,
                 padding: EdgeInsets.all(16.0),
@@ -1603,7 +2294,8 @@ class SettingsPage extends StatelessWidget {
                   'Help and Support',
                   style: TextStyle(
                     fontSize: 18,
-                    color: themeProvider.isDarkMode ? Colors.white : Colors.black,
+                    color:
+                        themeProvider.isDarkMode ? Colors.white : Colors.black,
                   ),
                 ),
               ),
@@ -1621,7 +2313,9 @@ class SettingsPage extends StatelessWidget {
               child: Container(
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(10.0),
-                  color: themeProvider.isDarkMode ? Colors.grey[800] : Colors.grey[200],
+                  color: themeProvider.isDarkMode
+                      ? Colors.grey[800]
+                      : Colors.grey[200],
                 ),
                 width: double.infinity,
                 padding: EdgeInsets.all(16.0),
@@ -1629,7 +2323,8 @@ class SettingsPage extends StatelessWidget {
                   'Logout',
                   style: TextStyle(
                     fontSize: 18,
-                    color: themeProvider.isDarkMode ? Colors.white : Colors.black,
+                    color:
+                        themeProvider.isDarkMode ? Colors.white : Colors.black,
                   ),
                 ),
               ),
@@ -1775,11 +2470,11 @@ class EventPage extends StatelessWidget {
             event: Event(
               name: 'Book Signing Event',
               imageUrl:
-              'https://static.wikia.nocookie.net/lotr/images/8/87/Ringstrilogyposter.jpg/revision/latest/scale-to-width-down/1000?cb=20210720095933',
+                  'https://static.wikia.nocookie.net/lotr/images/8/87/Ringstrilogyposter.jpg/revision/latest/scale-to-width-down/1000?cb=20210720095933',
               dateTime: DateTime(2024, 4, 18, 12, 30),
               // Friday, April 18th, 12:30 PM
               description:
-              'During the event, attendees would have the opportunity to meet Tolkien, briefly converse with him, and have their books signed. It\'s a special occasion for fans to connect with the author, express their admiration for his work, and obtain a personalized memento in the form of a signed book.',
+                  'During the event, attendees would have the opportunity to meet Tolkien, briefly converse with him, and have their books signed. It\'s a special occasion for fans to connect with the author, express their admiration for his work, and obtain a personalized memento in the form of a signed book.',
               location: '4545 Pierre-de Coubertin Ave\nMontreal, QC. H1V 3N7',
               spotsRemaining: 250,
             ),
@@ -1790,11 +2485,11 @@ class EventPage extends StatelessWidget {
             event: Event(
               name: 'Book Signing Event',
               imageUrl:
-              'https://cdn.mos.cms.futurecdn.net/d4RuRPLJHfAyUJiusHpZem-650-80.jpg.webp',
+                  'https://cdn.mos.cms.futurecdn.net/d4RuRPLJHfAyUJiusHpZem-650-80.jpg.webp',
               dateTime: DateTime(2024, 4, 20, 10, 30),
               // Friday, April 18th, 12:30 PM
               description:
-              'During the event, fans will have the chance to meet Rob MacGregor, the acclaimed author of numerous Indiana Jones novels. They can enjoy a brief conversation with him and get their books signed. This is a unique opportunity to connect with the author, share their appreciation for his work, and leave with a special signed memento',
+                  'During the event, fans will have the chance to meet Rob MacGregor, the acclaimed author of numerous Indiana Jones novels. They can enjoy a brief conversation with him and get their books signed. This is a unique opportunity to connect with the author, share their appreciation for his work, and leave with a special signed memento',
               location: '4545 Pierre-de Coubertin Ave\nMontreal, QC. H1V 3N7',
               spotsRemaining: 50,
             ),
@@ -1831,7 +2526,9 @@ class EventWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     var themeProvider = Provider.of<ThemeProvider>(context);
-    Color backgroundColor = themeProvider.isDarkMode ? Colors.grey[800] ?? Colors.black : Colors.grey[200] ?? Colors.white;
+    Color backgroundColor = themeProvider.isDarkMode
+        ? Colors.grey[800] ?? Colors.black
+        : Colors.grey[200] ?? Colors.white;
     Color textColor = themeProvider.isDarkMode ? Colors.white : Colors.black;
 
     return Padding(
@@ -1870,17 +2567,22 @@ class EventWidget extends StatelessWidget {
               children: [
                 Text(
                   'Event Location:',
-                  style: TextStyle(fontWeight: FontWeight.bold, color: textColor), // Text color based on theme mode
+                  style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: textColor), // Text color based on theme mode
                 ),
                 SizedBox(height: 4),
                 Text(
-                  event.location ?? '', // Provide a default value in case location is null
-                  style: TextStyle(color: textColor), // Text color based on theme mode
+                  event.location ?? '',
+                  // Provide a default value in case location is null
+                  style: TextStyle(
+                      color: textColor), // Text color based on theme mode
                 ),
                 SizedBox(height: 8),
                 Text(
                   'Spots Remaining: ${event.spotsRemaining}',
-                  style: TextStyle(color: textColor), // Text color based on theme mode
+                  style: TextStyle(
+                      color: textColor), // Text color based on theme mode
                 ),
               ],
             ),
