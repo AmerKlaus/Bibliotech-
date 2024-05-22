@@ -14,21 +14,32 @@ import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:image_picker/image_picker.dart';
 
+//class to set the theme either light or dark
 class ThemeProvider with ChangeNotifier {
+
+  //the default theme is light
   ThemeData _currentTheme = ThemeData.light();
+
+  //while dark mode is set to false
   bool _isDarkMode = false;
 
+  //determine what the theme is
   ThemeData getCurrentTheme() => _currentTheme;
 
   bool get isDarkMode => _isDarkMode;
 
+  //change theme depending on the toggle of the switch
   void toggleTheme() {
     _isDarkMode = !_isDarkMode;
     _currentTheme = _isDarkMode ? ThemeData.dark() : ThemeData.light();
+
+    //let the listener know when the theme changes
     notifyListeners();
   }
 }
 
+//main method (initialize firebase here include the theme through the whole
+// application)
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp();
@@ -40,6 +51,8 @@ void main() async {
   );
 }
 
+//provide the theme here as well
+//determine if light or dark
 class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
@@ -53,17 +66,19 @@ class MyApp extends StatelessWidget {
       themeMode: themeProvider.isDarkMode ? ThemeMode.dark : ThemeMode.light,
       darkTheme: ThemeData.dark().copyWith(
         // Customize the icon theme for dark mode
+        //if dark they are white if light they are dark
         iconTheme: IconThemeData(color: Colors.white),
       ),
     );
   }
 }
-
+//default home page
 class MyHomePage extends StatefulWidget {
   @override
   _MyHomePageState createState() => _MyHomePageState();
 }
 
+//keep track of the index for the nav bar
 class _MyHomePageState extends State<MyHomePage> {
   int _currentIndex = 0; // Index 1 for Book List
 
@@ -77,6 +92,7 @@ class _MyHomePageState extends State<MyHomePage> {
     CommunityPage(), // Index 6 Community Page
   ];
 
+  //making it so once a index(icon) is tapped that index will load
   void _onItemTapped(int index) {
     setState(() {
       _currentIndex = index;
@@ -98,12 +114,15 @@ class _MyHomePageState extends State<MyHomePage> {
   }
 }
 
+//navigation bar class
 class MyNavigationBar extends StatelessWidget {
   final int currentIndex;
   final Function(int) onItemTapped;
 
+  //both require the current index and the tap action by the user
   MyNavigationBar({required this.currentIndex, required this.onItemTapped});
 
+  //all icons for the bottom navigation bar
   @override
   Widget build(BuildContext context) {
     var themeProvider = Provider.of<ThemeProvider>(context);
@@ -143,15 +162,18 @@ class MyNavigationBar extends StatelessWidget {
           label: 'Community',
         ),
       ],
+
       // Ensure the navigation bar is visible in both light and dark modes
       backgroundColor:
           themeProvider.isDarkMode ? Colors.grey[900] : Colors.white,
+
       // Set the elevation to avoid blending with the background color
       elevation: 8.0,
     );
   }
 }
 
+//real homepage that displays library news
 class HomePage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
@@ -231,6 +253,7 @@ class HomePage extends StatelessWidget {
     );
   }
 
+  //more options for light and dark reading visibility
   Widget _buildNewsItem(
       String title, String description, ThemeProvider themeProvider) {
     return Column(
@@ -268,11 +291,13 @@ Widget _buildNewsItem(String title, String description) {
   );
 }
 
+//register page
 class RegisterPage extends StatefulWidget {
   @override
   _RegisterPageState createState() => _RegisterPageState();
 }
 
+//asking user for their input (added option to hide and unhide password)
 class _RegisterPageState extends State<RegisterPage> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
@@ -280,6 +305,7 @@ class _RegisterPageState extends State<RegisterPage> {
       TextEditingController();
   bool _obscurePassword = true;
 
+  //regular expression to require user for a strong password
   bool _isStrongPassword(String password) {
     String pattern =
         r'^(?=.*?[a-z])(?=.*?[A-Z])(?=.*?[0-9])(?=.*?[!@#$%^&*()_+{}|:"<>?~]).{8,}$';
@@ -287,12 +313,15 @@ class _RegisterPageState extends State<RegisterPage> {
     return regExp.hasMatch(password);
   }
 
+  //determining if the email is a valid one (includes a @ or not)
   bool _isValidEmail(String email) {
     String pattern = r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$';
     RegExp regExp = RegExp(pattern);
     return regExp.hasMatch(email);
   }
 
+  //method to register (both password should match)
+  //if not throw an error
   Future<void> _registerWithEmailAndPassword(BuildContext context) async {
     if (_passwordController.text != _confirmPasswordController.text) {
       showDialog(
@@ -311,6 +340,8 @@ class _RegisterPageState extends State<RegisterPage> {
       return;
     }
 
+    //if the password is not strong enough
+    //throw an error and let the user try again
     if (!_isStrongPassword(_passwordController.text)) {
       showDialog(
         context: context,
@@ -329,6 +360,8 @@ class _RegisterPageState extends State<RegisterPage> {
       return;
     }
 
+    //if email is not valid
+    //throw an error and let the user try again
     if (!_isValidEmail(_emailController.text)) {
       showDialog(
         context: context,
@@ -346,6 +379,7 @@ class _RegisterPageState extends State<RegisterPage> {
       return;
     }
 
+    //database operation of verifying
     try {
       UserCredential userCredential =
           await FirebaseAuth.instance.createUserWithEmailAndPassword(
@@ -353,6 +387,8 @@ class _RegisterPageState extends State<RegisterPage> {
         password: _passwordController.text,
       );
 
+      //database operation of storing the newly acquired information
+      //from the user
       await FirebaseFirestore.instance
           .collection('Users')
           .doc(userCredential.user!.uid)
@@ -361,6 +397,8 @@ class _RegisterPageState extends State<RegisterPage> {
         'email': _emailController.text,
       });
 
+      //after register user goes back to login
+      //if reigster fails throw error and let user try again
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (context) => LoginPage()),
@@ -383,6 +421,8 @@ class _RegisterPageState extends State<RegisterPage> {
     }
   }
 
+  //the actual register form
+  //has icon to hide and unhide password
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -464,7 +504,7 @@ class _RegisterPageState extends State<RegisterPage> {
                 padding: EdgeInsets.symmetric(vertical: 16.0, horizontal: 32.0),
                 textStyle: TextStyle(fontSize: 18),
                 minimumSize: Size(double.infinity,
-                    50), // Set width to fill parent and height to 50
+                    50),
               ),
             ),
           ],
@@ -474,6 +514,7 @@ class _RegisterPageState extends State<RegisterPage> {
   }
 }
 
+//book class (for api)
 class Book {
   final String id;
   final String title;
@@ -498,6 +539,7 @@ class Book {
   });
 }
 
+//book list page class
 class BookListPage extends StatefulWidget {
   @override
   _BookListPageState createState() => _BookListPageState();
@@ -511,6 +553,8 @@ class _BookListPageState extends State<BookListPage> {
   Random random = Random();
   TextEditingController searchController = TextEditingController();
 
+  //api to fetch our books
+  //has error handling in ase it takes to long to fetch
   Future<List<Book>> fetchRandomBooks() async {
     final response = await http.get(
       Uri.https('www.googleapis.com', '/books/v1/volumes', {
@@ -531,6 +575,7 @@ class _BookListPageState extends State<BookListPage> {
         // Generate random price between $5 and $50
         double price = 5 + random.nextDouble() * (50 - 5);
 
+        //adding the book
         books.add(Book(
           id: item['id'],
           title: volumeInfo['title'] ?? 'Unknown Title',
@@ -555,6 +600,7 @@ class _BookListPageState extends State<BookListPage> {
     }
   }
 
+  //method to reserve a book
   Future<void> reserveBook(Book book) async {
     try {
       // Check if the user has already reserved the book
@@ -598,11 +644,12 @@ class _BookListPageState extends State<BookListPage> {
         ),
       );
     } catch (e) {
-      print('Error reserving book: $e');
       // Show error message or handle error as needed
+      print('Error reserving book: $e');
     }
   }
 
+  //method to check if the book is reserved (uses userId and bookId)
   Future<bool> checkIfBookReserved(String bookId) async {
     try {
       // Check if the current user has already reserved the book
@@ -623,6 +670,7 @@ class _BookListPageState extends State<BookListPage> {
     futureBooks = fetchRandomBooks();
   }
 
+  //displaying the page display books
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -732,6 +780,7 @@ class _BookListPageState extends State<BookListPage> {
   }
 }
 
+//Book details page
 class BookDetailsPage extends StatelessWidget {
   final Book book;
 
@@ -802,6 +851,7 @@ class BookDetailsPage extends StatelessWidget {
   }
 }
 
+//library page where users can see their reserved books
 class LibraryPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
@@ -846,6 +896,7 @@ class LibraryPage extends StatelessWidget {
             );
           }
 
+          //uses the api from earlier to display the contents
           return ListView.builder(
             itemCount: snapshot.data!.docs.length,
             itemBuilder: (context, index) {
@@ -914,6 +965,7 @@ class LibraryPage extends StatelessWidget {
     );
   }
 
+  //method to remove the reserved books from owns library
   Future<void> _removeReservedBook(String documentId) async {
     try {
       await FirebaseFirestore.instance
@@ -925,6 +977,7 @@ class LibraryPage extends StatelessWidget {
     }
   }
 
+  //method to go to the review page
   void _navigateToReviewPage(BuildContext context, Book book) {
     Navigator.push(
       context,
@@ -932,6 +985,7 @@ class LibraryPage extends StatelessWidget {
     );
   }
 
+  //method to go to the book content page
   void _navigateToBookContentPage(BuildContext context, Book book) {
     Navigator.push(
       context,
@@ -940,6 +994,7 @@ class LibraryPage extends StatelessWidget {
   }
 }
 
+//class book content which lets users read the book
 class BookContentPage extends StatelessWidget {
   final Book book;
 
@@ -981,6 +1036,7 @@ class BookContentPage extends StatelessWidget {
   }
 }
 
+//review page where users can put reviews for their books
 class ReviewSubmissionPage extends StatefulWidget {
   final Book book;
 
@@ -1079,6 +1135,8 @@ class _ReviewSubmissionPageState extends State<ReviewSubmissionPage> {
   }
 }
 
+//class to display the reviews according to the books (reviews are grouped
+//by same books)
 class ReviewListPage extends StatelessWidget {
   final Book book;
 
@@ -1182,11 +1240,13 @@ class ReviewListPage extends StatelessWidget {
   }
 }
 
+//community page where users can interact with each other about books
 class CommunityPage extends StatefulWidget {
   @override
   _CommunityPageState createState() => _CommunityPageState();
 }
 
+//asking users for various inputs
 class _CommunityPageState extends State<CommunityPage> {
   final TextEditingController _searchController = TextEditingController();
   final TextEditingController _titleController = TextEditingController();
@@ -1206,10 +1266,11 @@ class _CommunityPageState extends State<CommunityPage> {
         Map<String, dynamic>? userData =
             userSnapshot.data() as Map<String, dynamic>?;
         if (userData != null) {
-          name = userData['name'];
           // Use name variable here
+          name = userData['name'];
+
         } else {
-          // Handle the case where userData is null
+
         }
         await FirebaseFirestore.instance.collection('Discussions').add({
           'title': _titleController.text,
@@ -1512,6 +1573,7 @@ class DiscussionTile extends StatelessWidget {
   }
 }
 
+//lets user add comments to a post
 class CommentSection extends StatelessWidget {
   final String discussionId;
 
@@ -1717,6 +1779,7 @@ class CommentTile extends StatelessWidget {
   }
 }
 
+//lets users reply to the comments on the post
 class ReplySection extends StatelessWidget {
   final String discussionId;
   final String commentId;
@@ -1786,6 +1849,7 @@ class ReplySection extends StatelessWidget {
   }
 }
 
+//login page where user enteres usernname and password
 class LoginPage extends StatelessWidget {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
@@ -1795,6 +1859,7 @@ class LoginPage extends StatelessWidget {
     _passwordController.text = '';
   }
 
+  //validates if they are in the same group
   Future<void> _loginWithEmailAndPassword(BuildContext context) async {
     try {
       UserCredential userCredential =
@@ -1915,6 +1980,8 @@ class LoginPage extends StatelessWidget {
   }
 }
 
+//forgot password page
+//send an email with a link to reset the password
 class ForgotPasswordPage extends StatelessWidget {
   final TextEditingController _emailController = TextEditingController();
 
@@ -1939,7 +2006,7 @@ class ForgotPasswordPage extends StatelessWidget {
         ),
       );
     } catch (e) {
-      // Handle errors
+      //  error handling
       print('Failed to send password reset email: $e');
       // Show error message to the user
       showDialog(
@@ -1997,6 +2064,8 @@ class ForgotPasswordPage extends StatelessWidget {
   }
 }
 
+//profile page where users can change their profile picture
+//change their password and account info
 class ProfilePage extends StatefulWidget {
   @override
   _ProfilePageState createState() => _ProfilePageState();
@@ -2005,6 +2074,7 @@ class ProfilePage extends StatefulWidget {
 class _ProfilePageState extends State<ProfilePage> {
   File? _image;
 
+  //allowing the user to pick and image
   Future<void> _pickImage() async {
     final picker = ImagePicker();
     final pickedFile = await picker.pickImage(source: ImageSource.gallery);
@@ -2015,6 +2085,7 @@ class _ProfilePageState extends State<ProfilePage> {
     }
   }
 
+  //uploading the image to the firebase storage
   Future<String?> _uploadImage() async {
     try {
       if (_image != null) {
@@ -2034,6 +2105,7 @@ class _ProfilePageState extends State<ProfilePage> {
     return null;
   }
 
+  //saving the profile picture to the database
   Future<void> _saveProfile() async {
     try {
       final imageUrl = await _uploadImage();
@@ -2154,11 +2226,13 @@ class _ProfilePageState extends State<ProfilePage> {
   }
 }
 
+//edit profile class where users can edit their name and email
 class EditProfilePage extends StatefulWidget {
   @override
   _EditProfilePageState createState() => _EditProfilePageState();
 }
 
+//asking the user for their input
 class _EditProfilePageState extends State<EditProfilePage> {
   late TextEditingController _nameController;
   late TextEditingController _emailController;
@@ -2256,7 +2330,8 @@ class _EditProfilePageState extends State<EditProfilePage> {
     );
   }
 }
-
+//settings page where users can set dark mode, contact customer support
+//and basic FAQ
 class SettingsPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
@@ -2349,6 +2424,7 @@ class SettingsPage extends StatelessWidget {
     );
   }
 
+  //method to display the FAQ
   void _showFAQ(BuildContext context) {
     // Show a dialog with FAQ or navigate to a FAQ page
     showDialog(
@@ -2362,11 +2438,11 @@ class SettingsPage extends StatelessWidget {
               children: [
                 Text("Q: How do I reset my password?"),
                 SizedBox(height: 8),
-                Text("A: You can reset your password by..."),
+                Text("A: You can reset your password by going in your profile and clicking change password button"),
                 SizedBox(height: 16),
                 Text("Q: Can I change my username?"),
                 SizedBox(height: 8),
-                Text("A: No, currently you cannot change your username."),
+                Text("A: Yes, head over to your profile where you can edit your profile details."),
               ],
             ),
           ),
@@ -2395,6 +2471,7 @@ class SettingsPage extends StatelessWidget {
   }
 }
 
+//feedback class that allows the user to send a ticket
 class FeedbackFormPage extends StatelessWidget {
   final TextEditingController subjectController = TextEditingController();
   final TextEditingController messageController = TextEditingController();
@@ -2444,6 +2521,9 @@ class FeedbackFormPage extends StatelessWidget {
     );
   }
 
+  //method that ask user their input
+  //and once the user clicks send it records
+  //thier message to the database
   void _submitFeedback(BuildContext context) async {
     String subject = subjectController.text.trim();
     String message = messageController.text.trim();
@@ -2471,6 +2551,7 @@ class FeedbackFormPage extends StatelessWidget {
   }
 }
 
+//event page where users can reserve to attend to these events
 class EventPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
@@ -2494,7 +2575,6 @@ class EventPage extends StatelessWidget {
             ),
           ),
 
-          // Add more EventWidget instances here for other events
           EventWidget(
             event: Event(
               name: 'Book Signing Event',
@@ -2508,12 +2588,27 @@ class EventPage extends StatelessWidget {
               spotsRemaining: 50,
             ),
           ),
+
+          EventWidget(
+            event: Event(
+              name: 'Book Signing Event',
+              imageUrl:
+              'https://static0.gamerantimages.com/wordpress/wp-content/uploads/2021/12/avp-2010.jpg?q=50&fit=contain&w=1140&h=&dpr=1.5',
+              dateTime: DateTime(2024, 12, 4, 10, 30),
+              // Friday, April 18th, 12:30 PM
+              description:
+              'At the event, attendees would have the chance to meet Steve Perry, engage in brief conversations with him, and have their books signed. Its a special occasion for fans to connect directly with the author, express their admiration for his work, and obtain a personalized memento in the form of a signed book',
+              location: '4545 Pierre-de Coubertin Ave\nMontreal, QC. H1V 3N7',
+              spotsRemaining: 20,
+            ),
+          ),
         ],
       ),
     );
   }
 }
 
+//event class
 class Event {
   final String name;
   final String imageUrl;
@@ -2531,7 +2626,7 @@ class Event {
     required this.spotsRemaining,
   });
 }
-
+//event widget class for general info
 class EventWidget extends StatelessWidget {
   final Event event;
 
@@ -2567,13 +2662,14 @@ class EventWidget extends StatelessWidget {
           ),
           SizedBox(height: 8),
           Text(
-            'During the event, attendees would have the opportunity to meet Tolkien, briefly converse with him, and have their books signed. It\'s a special occasion for fans to connect with the author, express their admiration for his work, and obtain a personalized memento in the form of a signed book.',
+            event.description, // Use event.description here
+            style: TextStyle(color: textColor),
           ),
           SizedBox(height: 8),
           Container(
             padding: EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: backgroundColor, // Background color based on theme mode
+              color: backgroundColor,
               borderRadius: BorderRadius.circular(8),
             ),
             child: Column(
@@ -2582,21 +2678,19 @@ class EventWidget extends StatelessWidget {
                 Text(
                   'Event Location:',
                   style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      color: textColor), // Text color based on theme mode
+                    fontWeight: FontWeight.bold,
+                    color: textColor,
+                  ),
                 ),
                 SizedBox(height: 4),
                 Text(
                   event.location ?? '',
-                  // Provide a default value in case location is null
-                  style: TextStyle(
-                      color: textColor), // Text color based on theme mode
+                  style: TextStyle(color: textColor),
                 ),
                 SizedBox(height: 8),
                 Text(
                   'Spots Remaining: ${event.spotsRemaining}',
-                  style: TextStyle(
-                      color: textColor), // Text color based on theme mode
+                  style: TextStyle(color: textColor),
                 ),
               ],
             ),
@@ -2625,6 +2719,7 @@ class EventWidget extends StatelessWidget {
   }
 }
 
+//once you reserve confirmation page will display
 class ReservationConfirmationPage extends StatelessWidget {
   final String name;
   final String email;
