@@ -845,7 +845,7 @@ class LibraryPage extends StatelessWidget {
             itemBuilder: (context, index) {
               DocumentSnapshot document = snapshot.data!.docs[index];
               Map<String, dynamic> data =
-                  document.data() as Map<String, dynamic>;
+              document.data() as Map<String, dynamic>;
 
               String id = data['id'] ?? '';
               String title = data['title'] ?? 'Unknown Title';
@@ -948,19 +948,27 @@ class BookContentPage extends StatelessWidget {
       body: Center(
         child: book.previewLink.isNotEmpty
             ? ElevatedButton(
-                onPressed: () async {
-                  if (await canLaunchUrl(Uri.parse(book.previewLink))) {
-                    await launchUrl(Uri.parse(book.previewLink));
-                  } else {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text('Could not launch ${book.previewLink}'),
-                      ),
-                    );
-                  }
-                },
-                child: Text('Read Book'),
-              )
+          onPressed: () async {
+            String url = book.previewLink;
+            try {
+              await launch(url, forceSafariVC: false);
+            } catch (e) {
+              print('Error launching URL: $e');
+              // Try launching via intent
+              try {
+                await launch(url, forceWebView: true);
+              } catch (e) {
+                print('Error launching URL via intent: $e');
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('Could not launch $url'),
+                  ),
+                );
+              }
+            }
+          },
+          child: Text('Read Book'),
+        )
             : Text('No preview available for this book.'),
       ),
     );
