@@ -590,7 +590,13 @@ class _BookListPageState extends State<BookListPage> {
         'reservedAt': Timestamp.now(),
         'previewLink': book.previewLink,
       });
-      // Show success message or perform any other action
+
+      // Show success message
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Book reserved successfully!'),
+        ),
+      );
     } catch (e) {
       print('Error reserving book: $e');
       // Show error message or handle error as needed
